@@ -164,7 +164,7 @@ export default function RoutineSettingsPage() {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
-      const { data } = await supabase.from('routine_preferences').select('morning_items, night_items').eq('user_id', user.id).single()
+      const { data } = await supabase.from('routine_preferences').select('morning_items, night_items').eq('user_id', user.id).maybeSingle()
       if (data) {
         setMorningItems(data.morning_items || [])
         setNightItems(data.night_items || [])
@@ -179,11 +179,11 @@ export default function RoutineSettingsPage() {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
-      await supabase.from('routine_preferences').upsert({
-        user_id: user.id,
-        morning_items: morningItems,
-        night_items: nightItems,
-      })
+      const { error: routineErr } = await supabase.from('routine_preferences').upsert(
+        { user_id: user.id, morning_items: morningItems, night_items: nightItems },
+        { onConflict: 'user_id' }
+      )
+      if (routineErr) throw routineErr
       toast('Routine saved! 🎉', 'success')
     } catch {
       toast('Failed to save routine', 'error')

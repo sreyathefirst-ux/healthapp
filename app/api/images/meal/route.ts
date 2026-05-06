@@ -44,7 +44,7 @@ export async function POST(req: Request) {
       .eq('user_id', user.id)
       .order('week_start_date', { ascending: false })
       .limit(1)
-      .single()
+      .maybeSingle()
 
     if (weeklyPlan?.meal_plan) {
       const plan = weeklyPlan.meal_plan as Record<string, unknown>

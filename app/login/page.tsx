@@ -33,7 +33,7 @@ export default function LoginPage() {
         .from('users')
         .select('onboarding_complete')
         .eq('id', data.user.id)
-        .single()
+        .maybeSingle()
 
       if (profile?.onboarding_complete) {
         router.push('/')

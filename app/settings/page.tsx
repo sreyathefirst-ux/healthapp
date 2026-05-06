@@ -29,8 +29,8 @@ export default function SettingsPage() {
       if (!user) return
 
       const [userRes, petRes] = await Promise.all([
-        supabase.from('users').select('name, weight_kg').eq('id', user.id).single(),
-        supabase.from('pet').select('pet_name').eq('user_id', user.id).single(),
+        supabase.from('users').select('name, weight_kg').eq('id', user.id).maybeSingle(),
+        supabase.from('pet').select('pet_name').eq('user_id', user.id).maybeSingle(),
       ])
 
       setUserName(userRes.data?.name || '')

@@ -24,7 +24,7 @@ export default function NotificationsSettingsPage() {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
-      const { data } = await supabase.from('routine_preferences').select('wake_time, sleep_time').eq('user_id', user.id).single()
+      const { data } = await supabase.from('routine_preferences').select('wake_time, sleep_time').eq('user_id', user.id).maybeSingle()
       if (data) {
         setWakeTime(data.wake_time || '07:00')
         setSleepTime(data.sleep_time || '23:00')
@@ -68,7 +68,10 @@ export default function NotificationsSettingsPage() {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
-      await supabase.from('routine_preferences').upsert({ user_id: user.id, wake_time: wakeTime, sleep_time: sleepTime })
+      await supabase.from('routine_preferences').upsert(
+        { user_id: user.id, wake_time: wakeTime, sleep_time: sleepTime },
+        { onConflict: 'user_id' }
+      )
       toast('Notification times saved!', 'success')
     } catch {
       toast('Failed to save', 'error')

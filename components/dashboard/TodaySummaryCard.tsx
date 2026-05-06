@@ -25,9 +25,9 @@ export function TodaySummaryCard() {
       const dayOfWeek = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()
 
       const [logRes, routineRes, planRes] = await Promise.all([
-        supabase.from('daily_logs').select('*').eq('user_id', user.id).eq('date', today).single(),
-        supabase.from('routine_preferences').select('morning_items, night_items').eq('user_id', user.id).single(),
-        supabase.from('weekly_plans').select('workout_plan').eq('user_id', user.id).order('week_start_date', { ascending: false }).limit(1).single(),
+        supabase.from('daily_logs').select('*').eq('user_id', user.id).eq('date', today).maybeSingle(),
+        supabase.from('routine_preferences').select('morning_items, night_items').eq('user_id', user.id).maybeSingle(),
+        supabase.from('weekly_plans').select('workout_plan').eq('user_id', user.id).order('week_start_date', { ascending: false }).limit(1).maybeSingle(),
       ])
 
       const log = logRes.data

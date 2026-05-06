@@ -27,7 +27,7 @@ export default function DashboardPage() {
         .from('users')
         .select('name, onboarding_complete')
         .eq('id', user.id)
-        .single()
+        .maybeSingle()
 
       if (profile && !profile.onboarding_complete) {
         router.push('/onboarding')
@@ -38,11 +38,10 @@ export default function DashboardPage() {
 
       // Update last seen
       const today = new Date().toISOString().split('T')[0]
-      await supabase.from('daily_logs').upsert({
-        user_id: user.id,
-        date: today,
-        last_seen_at: new Date().toISOString(),
-      })
+      await supabase.from('daily_logs').upsert(
+        { user_id: user.id, date: today, last_seen_at: new Date().toISOString() },
+        { onConflict: 'user_id,date' }
+      )
 
       // Fetch weekly progress
       const sevenDaysAgo = new Date()

@@ -75,7 +75,7 @@ export default function GroceryListPage() {
         .eq('user_id', user.id)
         .order('week_start_date', { ascending: false })
         .limit(1)
-        .single()
+        .maybeSingle()
 
       if (data?.meal_plan) {
         setIngredients(extractIngredients(data.meal_plan as MealPlan))

@@ -18,11 +18,11 @@ export function useUser() {
       }
 
       const [userRes, medRes, foodRes, workoutRes, routineRes] = await Promise.all([
-        supabase.from('users').select('*').eq('id', authUser.id).single(),
-        supabase.from('medical_profile').select('*').eq('user_id', authUser.id).single(),
-        supabase.from('food_preferences').select('*').eq('user_id', authUser.id).single(),
-        supabase.from('workout_preferences').select('*').eq('user_id', authUser.id).single(),
-        supabase.from('routine_preferences').select('*').eq('user_id', authUser.id).single(),
+        supabase.from('users').select('*').eq('id', authUser.id).maybeSingle(),
+        supabase.from('medical_profile').select('*').eq('user_id', authUser.id).maybeSingle(),
+        supabase.from('food_preferences').select('*').eq('user_id', authUser.id).maybeSingle(),
+        supabase.from('workout_preferences').select('*').eq('user_id', authUser.id).maybeSingle(),
+        supabase.from('routine_preferences').select('*').eq('user_id', authUser.id).maybeSingle(),
       ])
 
       if (userRes.data) {

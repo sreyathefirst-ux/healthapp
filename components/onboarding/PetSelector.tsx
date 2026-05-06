@@ -141,14 +141,10 @@ export function PetSelector() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setLoading(false); return }
 
-    await supabase.from('pet').upsert({
-      user_id: user.id,
-      pet_type: selectedPet,
-      pet_name: petName.trim(),
-      accessories: [],
-      current_streak: 0,
-      longest_streak: 0,
-    })
+    await supabase.from('pet').upsert(
+      { user_id: user.id, pet_type: selectedPet, pet_name: petName.trim(), accessories: [], current_streak: 0, longest_streak: 0 },
+      { onConflict: 'user_id' }
+    )
 
     await supabase.from('users').update({ onboarding_complete: true }).eq('id', user.id)
 

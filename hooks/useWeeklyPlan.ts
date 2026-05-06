@@ -30,7 +30,7 @@ export function useWeeklyPlan(weekStartDate?: string) {
           .limit(1)
       }
 
-      const { data } = await query.single()
+      const { data } = await query.maybeSingle()
       setPlan(data)
       setLoading(false)
     }

@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
           .from('push_subscriptions')
           .select('*')
           .eq('user_id', user.id)
-          .single()
+          .maybeSingle()
 
         if (pushSub) {
           await sendPushNotification(pushSub, {

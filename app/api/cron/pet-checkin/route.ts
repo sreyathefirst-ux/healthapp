@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
           .select('last_seen_at')
           .eq('user_id', user.id)
           .eq('date', today)
-          .single()
+          .maybeSingle()
 
         const isInactive = !log || !log.last_seen_at || new Date(log.last_seen_at) < new Date(threeHoursAgo)
         if (!isInactive) continue
@@ -41,13 +41,13 @@ export async function POST(req: NextRequest) {
           .from('pet')
           .select('pet_name')
           .eq('user_id', user.id)
-          .single()
+          .maybeSingle()
 
         const { data: pushSub } = await supabase
           .from('push_subscriptions')
           .select('*')
           .eq('user_id', user.id)
-          .single()
+          .maybeSingle()
 
         if (pushSub && pet) {
           await sendPushNotification(pushSub, {

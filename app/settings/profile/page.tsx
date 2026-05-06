@@ -34,10 +34,10 @@ export default function ProfileSettingsPage() {
       if (!user) return
 
       const [uRes, mRes, fRes, wRes] = await Promise.all([
-        supabase.from('users').select('*').eq('id', user.id).single(),
-        supabase.from('medical_profile').select('*').eq('user_id', user.id).single(),
-        supabase.from('food_preferences').select('*').eq('user_id', user.id).single(),
-        supabase.from('workout_preferences').select('*').eq('user_id', user.id).single(),
+        supabase.from('users').select('*').eq('id', user.id).maybeSingle(),
+        supabase.from('medical_profile').select('*').eq('user_id', user.id).maybeSingle(),
+        supabase.from('food_preferences').select('*').eq('user_id', user.id).maybeSingle(),
+        supabase.from('workout_preferences').select('*').eq('user_id', user.id).maybeSingle(),
       ])
 
       if (uRes.data) setProfile({ name: uRes.data.name || '', age: String(uRes.data.age || ''), height_cm: String(uRes.data.height_cm || ''), weight_kg: String(uRes.data.weight_kg || '') })
@@ -57,12 +57,17 @@ export default function ProfileSettingsPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
-      await Promise.all([
+      const results = await Promise.all([
         supabase.from('users').update({ name: profile.name, age: Number(profile.age), height_cm: Number(profile.height_cm), weight_kg: Number(profile.weight_kg) }).eq('id', user.id),
-        supabase.from('medical_profile').upsert({ user_id: user.id, conditions: splitList(medical.conditions), medications: splitList(medical.medications), supplements: splitList(medical.supplements), concerns: splitList(medical.concerns), goals: splitList(medical.goals), success_definition: medical.success_definition }),
-        supabase.from('food_preferences').upsert({ user_id: user.id, restrictions: splitList(food.restrictions), allergies: splitList(food.allergies), loved_cuisines: splitList(food.loved_cuisines), disliked_foods: splitList(food.disliked_foods), meal_prep_days: Number(food.meal_prep_days) }),
-        supabase.from('workout_preferences').upsert({ user_id: user.id, goals: splitList(workout.goals), activity_types: splitList(workout.activity_types), days_per_week: Number(workout.days_per_week), gym_access: workout.gym_access, home_equipment: splitList(workout.home_equipment), preferred_duration_mins: Number(workout.preferred_duration_mins) }),
+        supabase.from('medical_profile').upsert({ user_id: user.id, conditions: splitList(medical.conditions), medications: splitList(medical.medications), supplements: splitList(medical.supplements), concerns: splitList(medical.concerns), goals: splitList(medical.goals), success_definition: medical.success_definition }, { onConflict: 'user_id' }),
+        supabase.from('food_preferences').upsert({ user_id: user.id, restrictions: splitList(food.restrictions), allergies: splitList(food.allergies), loved_cuisines: splitList(food.loved_cuisines), disliked_foods: splitList(food.disliked_foods), meal_prep_days: Number(food.meal_prep_days) }, { onConflict: 'user_id' }),
+        supabase.from('workout_preferences').upsert({ user_id: user.id, goals: splitList(workout.goals), activity_types: splitList(workout.activity_types), days_per_week: Number(workout.days_per_week), gym_access: workout.gym_access, home_equipment: splitList(workout.home_equipment), preferred_duration_mins: Number(workout.preferred_duration_mins) }, { onConflict: 'user_id' }),
       ])
+      const saveErrors = results.map((r, i) => r.error ? `table[${i}]: ${r.error.message}` : null).filter(Boolean)
+      if (saveErrors.length > 0) {
+        console.error('[settings/profile] save errors:', saveErrors)
+        throw new Error(saveErrors.join('; '))
+      }
 
       toast('Profile saved! Changes will take effect on next plan generation.', 'success')
     } catch {

@@ -29,7 +29,7 @@ export function usePetState() {
         .from('pet')
         .select('*')
         .eq('user_id', user.id)
-        .single()
+        .maybeSingle()
 
       if (petData) {
         setPet(petData)
