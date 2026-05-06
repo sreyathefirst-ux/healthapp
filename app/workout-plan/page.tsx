@@ -28,7 +28,8 @@ export default function WorkoutPlanPage() {
   const [weekOffset, setWeekOffset] = useState(0)
   const [plan, setPlan] = useState<WorkoutPlan | null>(null)
   const [loading, setLoading] = useState(true)
-  const [regenerating, setRegenerating] = useState(false)
+  const [fetchError, setFetchError] = useState(false)
+  const [generating, setGenerating] = useState(false)
   const [selectedDay, setSelectedDay] = useState<typeof DAYS[number]>('monday')
   const [workoutLog, setWorkoutLog] = useState<Record<string, WorkoutLogStatus>>({})
   const [swapModal, setSwapModal] = useState<{ workout: WorkoutDay; day: string } | null>(null)
@@ -45,50 +46,58 @@ export default function WorkoutPlanPage() {
   useEffect(() => {
     async function fetchPlan() {
       setLoading(true)
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
+      setFetchError(false)
+      try {
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) { setLoading(false); return }
 
-      const weekStart = getWeekStartDate(weekOffset)
-      const { data } = await supabase
-        .from('weekly_plans')
-        .select('workout_plan')
-        .eq('user_id', user.id)
-        .eq('week_start_date', weekStart)
-        .single()
+        const weekStart = getWeekStartDate(weekOffset)
+        const { data, error } = await supabase
+          .from('weekly_plans')
+          .select('workout_plan')
+          .eq('user_id', user.id)
+          .eq('week_start_date', weekStart)
+          .maybeSingle()
 
-      setPlan(data?.workout_plan as WorkoutPlan || null)
+        if (error) throw error
+        setPlan((data?.workout_plan as WorkoutPlan) ?? null)
 
-      const today = new Date().toISOString().split('T')[0]
-      const { data: log } = await supabase
-        .from('daily_logs')
-        .select('workout_log')
-        .eq('user_id', user.id)
-        .eq('date', today)
-        .single()
+        const today = new Date().toISOString().split('T')[0]
+        const { data: log } = await supabase
+          .from('daily_logs')
+          .select('workout_log')
+          .eq('user_id', user.id)
+          .eq('date', today)
+          .maybeSingle()
 
-      setWorkoutLog((log?.workout_log as Record<string, WorkoutLogStatus>) || {})
-      setLoading(false)
+        setWorkoutLog((log?.workout_log as Record<string, WorkoutLogStatus>) ?? {})
+      } catch {
+        setFetchError(true)
+        setPlan(null)
+      } finally {
+        setLoading(false)
+      }
     }
     fetchPlan()
   }, [weekOffset])
 
-  async function handleRegenerate() {
-    if (!confirm('Regenerate this week\'s workout plan?')) return
-    setRegenerating(true)
+  async function handleGenerate(requireConfirm = false) {
+    if (requireConfirm && !confirm("Regenerate this week's workout plan? This will replace your current plan.")) return
+    setGenerating(true)
     try {
       const res = await fetch('/api/plans/workout', { method: 'POST' })
       const data = await res.json()
       if (data.success) {
         setPlan(data.plan)
-        toast('Workout plan regenerated! 💪', 'success')
+        toast('Workout plan generated! 💪', 'success')
       } else {
-        toast('Failed to regenerate plan', 'error')
+        toast(data.error || 'Failed to generate plan', 'error')
       }
     } catch {
-      toast('Something went wrong', 'error')
+      toast('Something went wrong. Please try again.', 'error')
     } finally {
-      setRegenerating(false)
+      setGenerating(false)
     }
   }
 
@@ -96,17 +105,20 @@ export default function WorkoutPlanPage() {
     const newLog = { ...workoutLog, [day]: status }
     setWorkoutLog(newLog)
 
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-
-    const today = new Date().toISOString().split('T')[0]
-    await supabase.from('daily_logs').upsert({
-      user_id: user.id,
-      date: today,
-      workout_log: newLog,
-      last_seen_at: new Date().toISOString(),
-    })
+    try {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const today = new Date().toISOString().split('T')[0]
+      await supabase.from('daily_logs').upsert({
+        user_id: user.id,
+        date: today,
+        workout_log: newLog,
+        last_seen_at: new Date().toISOString(),
+      })
+    } catch {
+      toast('Failed to save log', 'error')
+    }
   }
 
   async function openSwapModal(workout: WorkoutDay, day: string) {
@@ -150,17 +162,37 @@ export default function WorkoutPlanPage() {
   }
 
   const weekStart = getWeekStartDate(weekOffset)
-  const dayWorkout = plan?.days[selectedDay]
+  const dayWorkout = plan?.days?.[selectedDay]
+
+  // Full-page empty state for first-time users (current week, no plan)
+  if (!loading && !plan && weekOffset === 0 && !fetchError) {
+    return (
+      <AppShell>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+          <span className="text-7xl mb-6">💪</span>
+          <h2 className="text-2xl font-bold text-text-primary mb-3">No workout plan yet</h2>
+          <p className="text-text-secondary mb-8 max-w-sm">
+            Vitalia will build a personalized 7-day workout plan based on your fitness goals, equipment, and health profile.
+          </p>
+          <Button onClick={() => handleGenerate(false)} loading={generating} size="lg">
+            Generate my first plan ✨
+          </Button>
+        </div>
+      </AppShell>
+    )
+  }
 
   return (
     <AppShell>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-text-primary">Workout Plan</h1>
-          <Button variant="secondary" size="sm" onClick={handleRegenerate} loading={regenerating}>
-            <RefreshCw size={14} />
-            Regenerate
-          </Button>
+          {plan && (
+            <Button variant="secondary" size="sm" onClick={() => handleGenerate(true)} loading={generating}>
+              <RefreshCw size={14} />
+              Regenerate
+            </Button>
+          )}
         </div>
 
         {/* Week selector */}
@@ -178,38 +210,46 @@ export default function WorkoutPlanPage() {
           </button>
         </div>
 
-        {/* Day tabs */}
-        <div className="flex gap-2 overflow-x-auto pb-1">
-          {DAYS.map((day, i) => {
-            const w = plan?.days[day]
-            const isRest = w?.type === 'rest'
-            const isLogged = workoutLog[day]
-            return (
-              <button
-                key={day}
-                onClick={() => setSelectedDay(day)}
-                className={`flex-shrink-0 px-4 py-2 rounded-xl text-sm font-medium transition-all relative ${
-                  selectedDay === day ? 'bg-accent-primary text-text-primary' : 'bg-white text-text-secondary hover:bg-accent-primary/10'
-                }`}
-              >
-                {DAY_LABELS[i]}
-                {isRest && <span className="text-xs block">🧘</span>}
-                {isLogged && !isRest && <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full" />}
-              </button>
-            )
-          })}
-        </div>
+        {/* Day tabs — only show when plan exists */}
+        {plan && (
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {DAYS.map((day, i) => {
+              const w = plan?.days?.[day]
+              const isRest = w?.type === 'rest'
+              const isLogged = workoutLog[day]
+              return (
+                <button
+                  key={day}
+                  onClick={() => setSelectedDay(day)}
+                  className={`flex-shrink-0 px-4 py-2 rounded-xl text-sm font-medium transition-all relative ${
+                    selectedDay === day ? 'bg-accent-primary text-text-primary' : 'bg-white text-text-secondary hover:bg-accent-primary/10'
+                  }`}
+                >
+                  {DAY_LABELS[i]}
+                  {isRest && <span className="text-xs block">🧘</span>}
+                  {isLogged && !isRest && <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full" />}
+                </button>
+              )
+            })}
+          </div>
+        )}
 
         {loading ? (
           <CardSkeleton />
-        ) : !plan ? (
+        ) : fetchError ? (
           <div className="text-center py-16">
-            <span className="text-5xl block mb-4">💪</span>
-            <h3 className="font-semibold text-text-primary mb-2">No workout plan yet</h3>
-            <Button onClick={handleRegenerate} loading={regenerating}>Generate Workout Plan</Button>
+            <span className="text-5xl block mb-4">⚠️</span>
+            <h3 className="font-semibold text-text-primary mb-2">Failed to load workout plan</h3>
+            <p className="text-text-secondary mb-6 text-sm">Check your connection and try again.</p>
+            <Button variant="secondary" onClick={() => setWeekOffset((o) => o)}>Retry</Button>
+          </div>
+        ) : !plan && weekOffset !== 0 ? (
+          <div className="text-center py-16">
+            <span className="text-5xl block mb-4">📅</span>
+            <p className="text-text-secondary">No workout plan for this week.</p>
           </div>
         ) : !dayWorkout ? (
-          <div className="text-center py-8 text-text-secondary">No workout for this day</div>
+          <div className="text-center py-8 text-text-secondary">No workout found for this day.</div>
         ) : (
           <WorkoutDayCard
             workout={dayWorkout}
