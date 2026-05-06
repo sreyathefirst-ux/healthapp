@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
 import { PetType } from '@/types'
+import { Check, X, Loader2, RefreshCw } from 'lucide-react'
 
 const pets: { type: PetType; emoji: string; name: string; description: string }[] = [
   { type: 'cat', emoji: '🐱', name: 'Cat', description: 'Elegant and independent, but deeply loyal' },
@@ -15,12 +16,122 @@ const pets: { type: PetType; emoji: string; name: string; description: string }[
   { type: 'fox', emoji: '🦊', name: 'Fox', description: 'Clever, quick, and full of surprises' },
 ]
 
+const LOADING_MESSAGES = [
+  'Reviewing your health profile...',
+  'Analyzing your bloodwork markers...',
+  'Crafting your personalized meal plan...',
+  'Designing your workout routine...',
+  'Building your morning habits...',
+  'Preparing your health report...',
+  'Consulting your specialist team...',
+  'Finalizing your night routine...',
+  'Almost ready — this is worth the wait!',
+]
+
+type TaskStatus = 'pending' | 'running' | 'done' | 'error'
+
+interface Task {
+  key: string
+  label: string
+  emoji: string
+  endpoint: string
+  status: TaskStatus
+}
+
+const TASK_DEFINITIONS: Omit<Task, 'status'>[] = [
+  { key: 'report',  label: 'Health Report',    emoji: '🩺', endpoint: '/api/plans/report'  },
+  { key: 'meal',    label: 'Meal Plan',         emoji: '🥗', endpoint: '/api/plans/meal'    },
+  { key: 'workout', label: 'Workout Plan',      emoji: '💪', endpoint: '/api/plans/workout' },
+  { key: 'morning', label: 'Morning Routine',   emoji: '🌅', endpoint: '/api/plans/routine' },
+  { key: 'night',   label: 'Night Routine',     emoji: '🌙', endpoint: ''                   },
+]
+
+function makeTasks(): Task[] {
+  return TASK_DEFINITIONS.map((t) => ({ ...t, status: 'pending' }))
+}
+
+async function callWithRetry(endpoint: string): Promise<boolean> {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const res = await fetch(endpoint, { method: 'POST' })
+      if (!res.ok) {
+        if (attempt === 0) continue
+        return false
+      }
+      const data = await res.json()
+      if (data.success) return true
+      if (attempt === 0) continue
+      return false
+    } catch {
+      if (attempt === 0) continue
+      return false
+    }
+  }
+  return false
+}
+
 export function PetSelector() {
   const router = useRouter()
   const [selectedPet, setSelectedPet] = useState<PetType | null>(null)
   const [petName, setPetName] = useState('')
   const [loading, setLoading] = useState(false)
-  const [generatingPlans, setGeneratingPlans] = useState(false)
+  const [generating, setGenerating] = useState(false)
+  const [tasks, setTasks] = useState<Task[]>(makeTasks())
+  const [msgIndex, setMsgIndex] = useState(0)
+  const [allDone, setAllDone] = useState(false)
+  const [hasErrors, setHasErrors] = useState(false)
+  const msgTimer = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  useEffect(() => {
+    if (generating) {
+      msgTimer.current = setInterval(() => {
+        setMsgIndex((i) => (i + 1) % LOADING_MESSAGES.length)
+      }, 3000)
+    }
+    return () => { if (msgTimer.current) clearInterval(msgTimer.current) }
+  }, [generating])
+
+  function setTaskStatus(key: string, status: TaskStatus) {
+    setTasks((prev) => prev.map((t) => (t.key === key ? { ...t, status } : t)))
+  }
+
+  async function runGeneration(tasksToRun: Task[]) {
+    // Mark all tasks-to-run as running (except 'night' which shares the routine call)
+    const activeKeys = new Set(tasksToRun.map((t) => t.key))
+
+    // Deduplicate: morning and night share one API call
+    const apiCalls: { keys: string[]; endpoint: string }[] = []
+    let routineTask: Task | undefined
+
+    for (const task of tasksToRun) {
+      if (task.key === 'morning') {
+        routineTask = task
+        // night will be bundled with morning
+        apiCalls.push({ keys: ['morning', 'night'], endpoint: '/api/plans/routine' })
+      } else if (task.key === 'night') {
+        // handled with morning above — skip if morning is also in the list
+        if (!activeKeys.has('morning')) {
+          // night retrying alone — still call routine endpoint
+          apiCalls.push({ keys: ['morning', 'night'], endpoint: '/api/plans/routine' })
+        }
+      } else {
+        apiCalls.push({ keys: [task.key], endpoint: task.endpoint })
+      }
+    }
+
+    // Mark tasks as running
+    setTasks((prev) => prev.map((t) =>
+      activeKeys.has(t.key) ? { ...t, status: 'running' } : t
+    ))
+
+    await Promise.all(
+      apiCalls.map(async ({ keys, endpoint }) => {
+        const success = await callWithRetry(endpoint)
+        const status: TaskStatus = success ? 'done' : 'error'
+        setTasks((prev) => prev.map((t) => keys.includes(t.key) ? { ...t, status } : t))
+      })
+    )
+  }
 
   async function handleMeetPet() {
     if (!selectedPet || !petName.trim()) return
@@ -28,9 +139,8 @@ export function PetSelector() {
 
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+    if (!user) { setLoading(false); return }
 
-    // Save pet
     await supabase.from('pet').upsert({
       user_id: user.id,
       pet_type: selectedPet,
@@ -40,60 +150,212 @@ export function PetSelector() {
       longest_streak: 0,
     })
 
-    // Mark onboarding complete
     await supabase.from('users').update({ onboarding_complete: true }).eq('id', user.id)
 
-    // Request push notification permission
+    // Request push notification permission (non-blocking)
     if ('Notification' in window && 'serviceWorker' in navigator) {
-      const permission = await Notification.requestPermission()
-      if (permission === 'granted') {
-        try {
-          const registration = await navigator.serviceWorker.ready
-          const subscription = await registration.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
-          })
-          await fetch('/api/push/subscribe', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ subscription }),
-          })
-        } catch {}
-      }
+      Notification.requestPermission().then(async (permission) => {
+        if (permission === 'granted') {
+          try {
+            const registration = await navigator.serviceWorker.ready
+            const subscription = await registration.pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+            })
+            await fetch('/api/push/subscribe', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ subscription }),
+            })
+          } catch {}
+        }
+      }).catch(() => {})
     }
 
     setLoading(false)
-    setGeneratingPlans(true)
+    setGenerating(true)
+    const initialTasks = makeTasks()
+    setTasks(initialTasks)
 
-    // Generate all plans in parallel
-    await Promise.all([
-      fetch('/api/plans/meal', { method: 'POST' }),
-      fetch('/api/plans/workout', { method: 'POST' }),
-      fetch('/api/plans/report', { method: 'POST' }),
-      fetch('/api/plans/routine', { method: 'POST' }),
-    ])
+    await runGeneration(initialTasks)
 
-    router.push('/onboarding/results')
+    // Check final state
+    setTasks((prev) => {
+      const errors = prev.filter((t) => t.status === 'error')
+      if (errors.length === 0) {
+        setAllDone(true)
+      } else {
+        setHasErrors(true)
+      }
+      return prev
+    })
   }
 
-  if (generatingPlans) {
+  // Navigate once allDone flips true
+  useEffect(() => {
+    if (allDone) {
+      const t = setTimeout(() => router.push('/onboarding/results'), 800)
+      return () => clearTimeout(t)
+    }
+  }, [allDone, router])
+
+  async function handleRetryFailed() {
+    const failedTasks = tasks.filter((t) => t.status === 'error')
+    if (failedTasks.length === 0) return
+    setHasErrors(false)
+
+    await runGeneration(failedTasks)
+
+    setTasks((prev) => {
+      const errors = prev.filter((t) => t.status === 'error')
+      if (errors.length === 0) {
+        setAllDone(true)
+      } else {
+        setHasErrors(true)
+      }
+      return prev
+    })
+  }
+
+  const petEmoji = pets.find((p) => p.type === selectedPet)?.emoji ?? '🌿'
+  const doneCount = tasks.filter((t) => t.status === 'done').length
+
+  if (generating) {
     return (
-      <div className="min-h-screen bg-bg flex flex-col items-center justify-center gap-6 px-4">
-        <motion.div
-          animate={{ scale: [1, 1.2, 1], rotate: [0, 10, -10, 0] }}
-          transition={{ duration: 2, repeat: Infinity }}
-          className="text-8xl"
-        >
-          {pets.find((p) => p.type === selectedPet)?.emoji}
-        </motion.div>
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-text-primary mb-2">Building your plan...</h2>
-          <p className="text-text-secondary">{petName} is helping Vitalia craft your personalized health journey</p>
-        </div>
-        <div className="flex gap-2">
-          <div className="w-3 h-3 rounded-full bg-accent-primary animate-bounce" />
-          <div className="w-3 h-3 rounded-full bg-accent-coral animate-bounce" style={{ animationDelay: '0.1s' }} />
-          <div className="w-3 h-3 rounded-full bg-accent-sage animate-bounce" style={{ animationDelay: '0.2s' }} />
+      <div className="min-h-screen bg-bg flex flex-col items-center justify-center px-4 py-12">
+        <div className="w-full max-w-sm space-y-8">
+
+          {/* Pet animation */}
+          <div className="flex justify-center">
+            <motion.div
+              animate={
+                allDone
+                  ? { scale: [1, 1.3, 1], rotate: [0, 15, -15, 0] }
+                  : hasErrors
+                  ? { scale: [1, 0.95, 1] }
+                  : { y: [0, -12, 0] }
+              }
+              transition={
+                allDone
+                  ? { duration: 0.6, repeat: 2 }
+                  : hasErrors
+                  ? { duration: 1.5, repeat: Infinity }
+                  : { duration: 1.8, repeat: Infinity, ease: 'easeInOut' }
+              }
+              className="text-8xl select-none"
+            >
+              {petEmoji}
+            </motion.div>
+          </div>
+
+          {/* Status text */}
+          <div className="text-center">
+            <AnimatePresence mode="wait">
+              {allDone ? (
+                <motion.div
+                  key="done"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="space-y-1"
+                >
+                  <h2 className="text-2xl font-bold text-text-primary">Your plan is ready! 🎉</h2>
+                  <p className="text-text-secondary text-sm">Taking you to your results...</p>
+                </motion.div>
+              ) : hasErrors ? (
+                <motion.div
+                  key="error"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="space-y-1"
+                >
+                  <h2 className="text-xl font-bold text-text-primary">Some items failed</h2>
+                  <p className="text-text-secondary text-sm">
+                    {tasks.filter((t) => t.status === 'error').length} item
+                    {tasks.filter((t) => t.status === 'error').length > 1 ? 's' : ''} couldn't be generated.
+                  </p>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key={msgIndex}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.4 }}
+                  className="space-y-1"
+                >
+                  <h2 className="text-xl font-bold text-text-primary">Building your plan...</h2>
+                  <p className="text-text-secondary text-sm">{LOADING_MESSAGES[msgIndex]}</p>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Progress bar */}
+          {!hasErrors && (
+            <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+              <motion.div
+                className="h-full bg-accent-primary rounded-full"
+                initial={{ width: '0%' }}
+                animate={{ width: `${(doneCount / tasks.length) * 100}%` }}
+                transition={{ duration: 0.5, ease: 'easeOut' }}
+              />
+            </div>
+          )}
+
+          {/* Task list */}
+          <div className="space-y-2">
+            {tasks.map((task) => (
+              <div
+                key={task.key}
+                className={`flex items-center gap-3 p-3 rounded-xl transition-all ${
+                  task.status === 'done'
+                    ? 'bg-accent-sage/20'
+                    : task.status === 'error'
+                    ? 'bg-red-50'
+                    : task.status === 'running'
+                    ? 'bg-accent-primary/10'
+                    : 'bg-white'
+                }`}
+              >
+                <span className="text-xl w-8 text-center flex-shrink-0">{task.emoji}</span>
+                <span className={`flex-1 text-sm font-medium ${
+                  task.status === 'done' ? 'text-green-700' :
+                  task.status === 'error' ? 'text-red-600' :
+                  'text-text-primary'
+                }`}>
+                  {task.label}
+                </span>
+                <div className="flex-shrink-0 w-6 h-6 flex items-center justify-center">
+                  {task.status === 'done' && (
+                    <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 300 }}>
+                      <Check size={16} className="text-green-600" />
+                    </motion.div>
+                  )}
+                  {task.status === 'error' && <X size={16} className="text-red-500" />}
+                  {task.status === 'running' && (
+                    <Loader2 size={16} className="text-accent-primary animate-spin" />
+                  )}
+                  {task.status === 'pending' && (
+                    <div className="w-3 h-3 rounded-full bg-gray-200" />
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Retry button — only shown when there are errors */}
+          {hasErrors && (
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+              <Button onClick={handleRetryFailed} className="w-full">
+                <RefreshCw size={16} />
+                Retry failed items
+              </Button>
+              <p className="text-center text-xs text-text-secondary mt-2">
+                Successfully generated items are already saved — only failed items will be retried.
+              </p>
+            </motion.div>
+          )}
+
         </div>
       </div>
     )
@@ -141,6 +403,7 @@ export function PetSelector() {
                 type="text"
                 value={petName}
                 onChange={(e) => setPetName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && !loading && petName.trim() && handleMeetPet()}
                 placeholder="Enter a name..."
                 maxLength={20}
                 className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-accent-primary text-sm"
