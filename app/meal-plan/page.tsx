@@ -77,10 +77,23 @@ export default function MealPlanPage() {
         // maybeSingle returns null data (not an error) when no row found
         if (error) throw error
         const raw = data?.meal_plan
-        console.log('[meal-plan] raw from DB — keys:', raw ? Object.keys(raw as object) : 'null')
+        console.log('[meal-plan PAGE] weekStart queried:', weekStart)
+        console.log('[meal-plan PAGE] DB row found:', data !== null, '| meal_plan null:', raw == null)
+        if (raw) {
+          console.log('[meal-plan PAGE] meal_plan top-level keys:', Object.keys(raw as object))
+          const days = (raw as Record<string, unknown>).days
+          if (days && typeof days === 'object') {
+            console.log('[meal-plan PAGE] days keys:', Object.keys(days as object))
+          } else {
+            console.error('[meal-plan PAGE] meal_plan.days is missing or not an object:', days)
+          }
+        }
         const normalizedPlan = raw ? normalizePlan(raw) : null
         if (raw && !normalizedPlan) {
-          console.error('[meal-plan] normalization failed — raw:', JSON.stringify(raw).slice(0, 500))
+          console.error('[meal-plan PAGE] normalizePlan returned null — raw:', JSON.stringify(raw).slice(0, 500))
+        }
+        if (normalizedPlan) {
+          console.log('[meal-plan PAGE] normalized days:', Object.keys(normalizedPlan.days))
         }
         setPlan(normalizedPlan)
 
@@ -109,9 +122,17 @@ export default function MealPlanPage() {
     try {
       const res = await fetch('/api/plans/meal', { method: 'POST' })
       const data = await res.json()
-      if (data.success) {
-        setPlan(normalizePlan(data.plan))
-        toast('Meal plan generated! 🥗', 'success')
+      console.log('[meal-plan PAGE] generate response:', { success: data.success, error: data.error, hasPlan: !!data.plan })
+      if (data.success && data.plan) {
+        console.log('[meal-plan PAGE] plan days from API:', data.plan.days ? Object.keys(data.plan.days) : 'none')
+        const normalized = normalizePlan(data.plan)
+        console.log('[meal-plan PAGE] normalized days:', normalized?.days ? Object.keys(normalized.days) : 'null')
+        setPlan(normalized)
+        if (!normalized) {
+          toast('Plan generated but structure was invalid. Please try again.', 'error')
+        } else {
+          toast('Meal plan generated! 🥗', 'success')
+        }
       } else {
         toast(data.error || 'Failed to generate plan', 'error')
       }
@@ -275,7 +296,13 @@ export default function MealPlanPage() {
             <p className="text-text-secondary">No meal plan for this week.</p>
           </div>
         ) : !dayMeals ? (
-          <div className="text-center py-8 text-text-secondary">No meals found for this day.</div>
+          <div className="text-center py-8">
+            <span className="text-4xl block mb-3">🍽️</span>
+            <p className="text-text-secondary text-sm mb-4">No meals for this day in your plan.</p>
+            <Button variant="secondary" size="sm" onClick={() => handleGenerate(true)} loading={generating}>
+              Regenerate plan
+            </Button>
+          </div>
         ) : (
           <div className="space-y-4">
             {(['breakfast', 'lunch', 'dinner', 'snack'] as const).map((mealType) => {
