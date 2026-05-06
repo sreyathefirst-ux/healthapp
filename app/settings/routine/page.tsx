@@ -1,16 +1,15 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { AppShell } from '@/components/layout/AppShell'
 import { Card } from '@/components/ui/Card'
-import { Button } from '@/components/ui/Button'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/Toast'
 import { RoutineItem } from '@/types'
 import { Plus, Trash2, Pencil, Check, X } from 'lucide-react'
 
 function generateId() {
-  return Math.random().toString(36).slice(2)
+  return Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2)
 }
 
 function RoutineEditor({
@@ -144,10 +143,13 @@ function RoutineEditor({
           placeholder="7:00 AM"
           className="w-24 px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:border-accent-primary text-sm"
         />
-        <Button variant="secondary" size="sm" onClick={addItem}>
+        <button
+          onClick={addItem}
+          className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-accent-primary/20 hover:bg-accent-primary/30 text-text-primary text-sm font-medium transition-colors"
+        >
           <Plus size={14} />
           Add
-        </Button>
+        </button>
       </div>
     </Card>
   )
@@ -157,7 +159,9 @@ export default function RoutineSettingsPage() {
   const { toast } = useToast()
   const [morningItems, setMorningItems] = useState<RoutineItem[]>([])
   const [nightItems, setNightItems] = useState<RoutineItem[]>([])
+  const [loaded, setLoaded] = useState(false)
   const [saving, setSaving] = useState(false)
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     async function fetchRoutine() {
@@ -169,24 +173,38 @@ export default function RoutineSettingsPage() {
         setMorningItems(data.morning_items || [])
         setNightItems(data.night_items || [])
       }
+      setLoaded(true)
     }
     fetchRoutine()
   }, [])
 
-  async function handleSave() {
+  // Auto-save with debounce whenever items change (after initial load)
+  useEffect(() => {
+    if (!loaded) return
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
+    saveTimeoutRef.current = setTimeout(() => {
+      saveToSupabase(morningItems, nightItems)
+    }, 600)
+    return () => { if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current) }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [morningItems, nightItems, loaded])
+
+  async function saveToSupabase(morning: RoutineItem[], night: RoutineItem[]) {
     setSaving(true)
     try {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
-      const { error: routineErr } = await supabase.from('routine_preferences').upsert(
-        { user_id: user.id, morning_items: morningItems, night_items: nightItems },
+      const { error } = await supabase.from('routine_preferences').upsert(
+        { user_id: user.id, morning_items: morning, night_items: night },
         { onConflict: 'user_id' }
       )
-      if (routineErr) throw routineErr
-      toast('Routine saved! 🎉', 'success')
-    } catch {
-      toast('Failed to save routine', 'error')
+      if (error) {
+        console.error('[routine settings] save error:', error.message)
+        toast('Failed to save', 'error')
+      }
+    } catch (e) {
+      console.error('[routine settings] unhandled save error:', e)
     } finally {
       setSaving(false)
     }
@@ -195,15 +213,14 @@ export default function RoutineSettingsPage() {
   return (
     <AppShell>
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold text-text-primary">Routine Editor</h1>
-        <p className="text-text-secondary text-sm">Customize your morning and night routine checklists. Reorder by using the arrow buttons.</p>
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-text-primary">Routine Editor</h1>
+          {saving && <span className="text-xs text-text-secondary">Saving...</span>}
+        </div>
+        <p className="text-text-secondary text-sm">Changes save automatically. Reorder using the arrow buttons.</p>
 
         <RoutineEditor title="☀️ Morning Routine" items={morningItems} onChange={setMorningItems} />
         <RoutineEditor title="🌙 Night Routine" items={nightItems} onChange={setNightItems} />
-
-        <Button onClick={handleSave} loading={saving} className="w-full">
-          Save Routine
-        </Button>
       </div>
     </AppShell>
   )

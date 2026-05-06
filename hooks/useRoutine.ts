@@ -4,6 +4,10 @@ import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { RoutineItem, DailyLog } from '@/types'
 
+function generateId() {
+  return Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2)
+}
+
 export function useRoutine(type: 'morning' | 'night') {
   const [items, setItems] = useState<RoutineItem[]>([])
   const [checkedIds, setCheckedIds] = useState<string[]>([])
@@ -74,5 +78,13 @@ export function useRoutine(type: 'morning' | 'night') {
     await persistItems(newItems)
   }
 
-  return { items, checkedIds, completion, loading, toggleItem, removeItem, updateItem }
+  async function addItem(label: string, time_target?: string) {
+    if (!label.trim()) return
+    const newItem: RoutineItem = { id: generateId(), label: label.trim(), time_target: time_target?.trim() || undefined }
+    const newItems = [...items, newItem]
+    setItems(newItems)
+    await persistItems(newItems)
+  }
+
+  return { items, checkedIds, completion, loading, toggleItem, removeItem, updateItem, addItem }
 }

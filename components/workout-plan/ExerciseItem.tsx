@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Exercise } from '@/types'
 
 interface ExerciseItemProps {
@@ -9,7 +9,23 @@ interface ExerciseItemProps {
 
 export function ExerciseItem({ exercise }: ExerciseItemProps) {
   const [expanded, setExpanded] = useState(false)
+  const [gifUrl, setGifUrl] = useState<string | null>(exercise.gif_url || null)
   const [gifError, setGifError] = useState(false)
+  const [gifLoading, setGifLoading] = useState(false)
+
+  useEffect(() => {
+    if (gifUrl || gifError) return
+    setGifLoading(true)
+    fetch(`/api/exercises/gif?name=${encodeURIComponent(exercise.name)}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.gif_url) setGifUrl(d.gif_url)
+        else setGifError(true)
+      })
+      .catch(() => setGifError(true))
+      .finally(() => setGifLoading(false))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exercise.name])
 
   return (
     <div className="p-4 bg-bg rounded-xl space-y-2">
@@ -21,21 +37,30 @@ export function ExerciseItem({ exercise }: ExerciseItemProps) {
               <span className="text-xs text-text-secondary">{exercise.sets} sets × {exercise.reps} reps</span>
             )}
             {exercise.duration_seconds && (
-              <span className="text-xs text-text-secondary">{Math.floor(exercise.duration_seconds / 60)}:{String(exercise.duration_seconds % 60).padStart(2, '0')} mins</span>
+              <span className="text-xs text-text-secondary">
+                {Math.floor(exercise.duration_seconds / 60)}:{String(exercise.duration_seconds % 60).padStart(2, '0')} min
+              </span>
             )}
             {exercise.rest_seconds && (
               <span className="text-xs text-text-secondary">Rest: {exercise.rest_seconds}s</span>
             )}
           </div>
         </div>
-        {exercise.gif_url && !gifError && (
-          <img
-            src={exercise.gif_url}
-            alt={exercise.name}
-            className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
-            onError={() => setGifError(true)}
-          />
-        )}
+
+        <div className="w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
+          {gifLoading ? (
+            <div className="animate-pulse w-full h-full bg-gray-200" />
+          ) : gifUrl && !gifError ? (
+            <img
+              src={gifUrl}
+              alt={exercise.name}
+              className="w-full h-full object-cover"
+              onError={() => setGifError(true)}
+            />
+          ) : (
+            <span className="text-2xl">💪</span>
+          )}
+        </div>
       </div>
 
       <button

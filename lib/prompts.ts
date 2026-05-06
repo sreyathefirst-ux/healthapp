@@ -14,12 +14,12 @@ Return ONLY valid JSON matching this exact structure — no markdown, no explana
       "dinner": { "id": "uuid", "name": "...", "description": "...", "reasoning": "...", "calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0, "fiber_g": 0, "ingredients": ["..."], "image_url": null, "image_prompt": "A hand-drawn sketchbook watercolor illustration of [meal name]..." },
       "snack": { "id": "uuid", "name": "...", "description": "...", "reasoning": "...", "calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0, "fiber_g": 0, "ingredients": ["..."], "image_url": null, "image_prompt": "A hand-drawn sketchbook watercolor illustration of [meal name]..." }
     },
-    "tuesday": { ... },
-    "wednesday": { ... },
-    "thursday": { ... },
-    "friday": { ... },
-    "saturday": { ... },
-    "sunday": { ... }
+    "tuesday": { "breakfast": {...}, "lunch": {...}, "dinner": {...}, "snack": {...} },
+    "wednesday": { "breakfast": {...}, "lunch": {...}, "dinner": {...}, "snack": {...} },
+    "thursday": { "breakfast": {...}, "lunch": {...}, "dinner": {...}, "snack": {...} },
+    "friday": { "breakfast": {...}, "lunch": {...}, "dinner": {...}, "snack": {...} },
+    "saturday": { "breakfast": {...}, "lunch": {...}, "dinner": {...}, "snack": {...} },
+    "sunday": { "breakfast": {...}, "lunch": {...}, "dinner": {...}, "snack": {...} }
   }
 }
 Rules:
@@ -28,7 +28,8 @@ Rules:
 - Calories and macros must be medically appropriate for the user's weight and goals
 - Reasoning must reference the user's specific conditions or bloodwork markers
 - image_prompt must describe the meal in Great British Baking Show watercolor sketch style
-- Use real UUIDs for ids (generate random uuid-like strings)`
+- Use real UUIDs for ids (generate random uuid-like strings)
+- ALL 7 days (monday through sunday) MUST be fully populated — never omit a day`
 
 export const WORKOUT_PLAN_PROMPT = `Generate a 7-day workout plan for this user.
 Return ONLY valid JSON matching this exact structure — no markdown, no explanation:
@@ -45,43 +46,20 @@ Return ONLY valid JSON matching this exact structure — no markdown, no explana
       ]
     },
     "tuesday": { "type": "rest", "recovery_note": "..." },
-    "wednesday": { ... },
-    "thursday": { ... },
-    "friday": { ... },
-    "saturday": { ... },
-    "sunday": { ... }
+    "wednesday": { "type": "workout", "workout_name": "...", "location": "gym", "duration_mins": 45, "exercises": [...] },
+    "thursday": { "type": "rest", "recovery_note": "..." },
+    "friday": { "type": "workout", "workout_name": "...", "location": "gym", "duration_mins": 45, "exercises": [...] },
+    "saturday": { "type": "workout", "workout_name": "...", "location": "home", "duration_mins": 30, "exercises": [...] },
+    "sunday": { "type": "rest", "recovery_note": "..." }
   }
 }
 Rules:
 - Respect gym_access and preferred activity types
-- Schedule exactly the right number of workout days per week, with rest days distributed optimally
+- Schedule exactly \${workout_preferences.days_per_week} workout days, with rest days distributed optimally
 - Reasoning must reference the user's specific goals or conditions
 - For home workouts, only use bodyweight or stated home equipment
-- Use real UUIDs for ids`
-
-export const HEALTH_REPORT_PROMPT = `Generate a comprehensive, deeply personalized health report for this patient. This report is written collaboratively by a specialist care team: a functional medicine doctor, endocrinologist, clinical nutritionist, and certified personal trainer. Each specialist has reviewed this patient's complete profile, bloodwork, medications, conditions, and stated concerns.
-
-The report must be formatted in Markdown and must be a minimum of 600 words. Write with clinical authority, warmth, and specificity. Do NOT give generic health advice — every statement must directly reference this patient's specific conditions, biomarker values, medications, or concerns. Use the patient's name throughout. Write in first-person plural ("we recommend", "our team has reviewed", "we've noticed").
-
-Include these sections:
-
-## From Your Functional Medicine Doctor
-Analyze the patient's full clinical picture holistically: how their conditions connect, how medications interact with their physiology, and what patterns emerge across their symptoms and lab values. If bloodwork is present, interpret each relevant marker and explain what it means for this specific patient — not in isolation, but in the context of everything else we know. Flag any concerning patterns or nutrient depletions that may result from their medications. Minimum 120 words.
-
-## From Your Endocrinologist
-Address hormonal, metabolic, and endocrine dimensions of this patient's profile. Interpret any relevant biomarkers (thyroid panel, fasting glucose, HbA1c, lipid panel, cortisol, etc.) with clinical precision — what these values mean for their energy, weight, mood, and long-term risk. Connect the endocrine picture to their stated conditions, medications, and symptoms. If no bloodwork was uploaded, address what we would expect to monitor and why given their conditions. Minimum 120 words.
-
-## From Your Clinical Nutritionist
-Provide specific, evidence-based nutritional guidance grounded in this patient's conditions, bloodwork, medications (including any drug-nutrient interactions), allergies, and food preferences. Name specific nutrients, foods, or dietary patterns and explain precisely why they are recommended for this individual's clinical picture. Address any deficiencies suggested by bloodwork or conditions. Reference their dietary restrictions and preferences. Minimum 120 words.
-
-## From Your Personal Trainer
-Assess this patient's fitness starting point given their conditions, exercise history, and goals. Explain the training approach we've designed for them and why it is specifically appropriate — including any modifications made for their health conditions, joint concerns, or medication side effects. Outline the physiological adaptations we expect and the timeline. Minimum 100 words.
-
-## Priority Action Items for This Week
-List 5 specific, high-impact action items this patient should focus on immediately. Each must be directly grounded in their clinical picture — not generic wellness tips. Include a brief clinical rationale for each.
-
-## A Note From Your Care Team
-A warm, personal closing paragraph addressed to the patient by name. Acknowledge the full complexity of their situation. Validate their specific goals. Express genuine encouragement and explain what having a coordinated specialist team means for their outcomes. 3-4 sentences.`
+- Use real UUIDs for ids
+- ALL 7 days must be present (type: "workout" or "rest")`
 
 export const ROUTINE_PROMPT = `Generate a personalized daily routine checklist for this user — a morning routine and a night routine.
 
@@ -108,6 +86,167 @@ Rules:
 - Use real UUID-like strings for ids (e.g. "a1b2c3d4-e5f6-7890-abcd-ef1234567890")
 - Do NOT include exercise or meals — those are handled separately`
 
+// ── Dynamic health report ──────────────────────────────────────────────────
+
+type BloodworkRow = {
+  biomarker_name: string
+  value: number
+  unit: string
+  reference_range_low: number
+  reference_range_high: number
+  is_flagged?: boolean
+}
+
+function markerMatch(marker: BloodworkRow, keywords: string[]): boolean {
+  const name = marker.biomarker_name.toLowerCase()
+  return keywords.some((k) => name.includes(k.toLowerCase()))
+}
+
+function isFlagged(markers: BloodworkRow[], keywords: string[]): boolean {
+  return markers.some((m) => m.is_flagged && markerMatch(m, keywords))
+}
+
+function hasCondition(conditions: string[], keywords: string[]): boolean {
+  return conditions.some((c) =>
+    keywords.some((k) => c.toLowerCase().includes(k.toLowerCase()))
+  )
+}
+
+function flaggedSummary(markers: BloodworkRow[]): string {
+  const flagged = markers.filter((m) => m.is_flagged)
+  if (flagged.length === 0) return 'No flagged biomarkers.'
+  return flagged
+    .map(
+      (m) =>
+        `${m.biomarker_name}: ${m.value}${m.unit} (ref: ${m.reference_range_low}–${m.reference_range_high}) ⚠️ FLAGGED`
+    )
+    .join('\n')
+}
+
+export function buildHealthReportPrompt(
+  profile: UserProfile,
+  bloodwork: BloodworkRow[]
+): string {
+  const conditions = (profile.medical_profile?.conditions || []).map((c) => c.toLowerCase())
+
+  // Determine which specialists are relevant
+  const needsCardiologist =
+    hasCondition(conditions, ['heart', 'cardio', 'hypertension', 'cholesterol', 'atherosclerosis', 'arrhythmia']) ||
+    isFlagged(bloodwork, ['LDL', 'Cholesterol', 'Triglyceride', 'HDL', 'Non-HDL', 'VLDL', 'Lipoprotein', 'CRP', 'hsCRP'])
+
+  const needsEndocrinologist =
+    hasCondition(conditions, [
+      'pcos', 'thyroid', 'hypothyroid', 'hyperthyroid', 'hashimoto', 'graves',
+      'diabetes', 'prediabetes', 'insulin resistance', 'adrenal', 'hormonal', 'cortisol',
+      'testosterone', 'estrogen', 'progesterone', 'menstrual', 'perimenopause', 'menopause',
+    ]) ||
+    isFlagged(bloodwork, [
+      'TSH', 'T3', 'T4', 'Thyroid', 'HbA1c', 'Hemoglobin A1c', 'Glucose', 'Fasting Glucose',
+      'Insulin', 'Cortisol', 'DHEA', 'Testosterone', 'Estrogen', 'Progesterone', 'LH', 'FSH',
+    ])
+
+  const needsGastroenterologist =
+    hasCondition(conditions, [
+      'ibs', 'crohn', 'celiac', 'colitis', 'sibo', 'digestive', 'gut', 'reflux', 'gerd',
+      'gastroparesis', 'bowel', 'colon',
+    ])
+
+  const needsDermatologist =
+    hasCondition(conditions, ['acne', 'eczema', 'psoriasis', 'rosacea', 'skin', 'dermatitis'])
+
+  const needsRheumatologist =
+    hasCondition(conditions, [
+      'lupus', 'rheumatoid', 'autoimmune', 'fibromyalgia', 'sjögren', 'sjogren', 'ra ', 'ra,',
+    ]) ||
+    isFlagged(bloodwork, ['ANA', 'Anti-', 'Rheumatoid Factor', 'CCP', 'ESR', 'Sed Rate'])
+
+  const flaggedBlock = flaggedSummary(bloodwork)
+  const hasBloodwork = bloodwork.length > 0
+  const allFlagged = bloodwork.filter((m) => m.is_flagged)
+
+  // Cholesterol routing text for cardiologist
+  const cardioFlagged = allFlagged.filter((m) =>
+    ['LDL', 'Cholesterol', 'Triglyceride', 'HDL', 'CRP', 'hsCRP'].some((k) =>
+      m.biomarker_name.toLowerCase().includes(k.toLowerCase())
+    )
+  )
+  const endoFlagged = allFlagged.filter((m) =>
+    ['TSH', 'T3', 'T4', 'Thyroid', 'HbA1c', 'Glucose', 'Insulin', 'Cortisol', 'DHEA', 'Testosterone', 'Estrogen', 'Progesterone', 'LH', 'FSH'].some(
+      (k) => m.biomarker_name.toLowerCase().includes(k.toLowerCase())
+    )
+  )
+
+  const cardioFlaggedText = cardioFlagged.length > 0
+    ? `\nFLAGGED markers for your review: ${cardioFlagged.map((m) => `${m.biomarker_name} ${m.value}${m.unit} (ref: ${m.reference_range_low}–${m.reference_range_high})`).join(', ')}`
+    : ''
+  const endoFlaggedText = endoFlagged.length > 0
+    ? `\nFLAGGED markers for your review: ${endoFlagged.map((m) => `${m.biomarker_name} ${m.value}${m.unit} (ref: ${m.reference_range_low}–${m.reference_range_high})`).join(', ')}`
+    : ''
+
+  let prompt = `Generate a comprehensive, deeply personalized health report for this patient. Write it as if from a coordinated specialist care team who have all reviewed this patient's complete profile.
+
+The report must be in Markdown, minimum 600 words. Write with warmth and clinical authority — not overly clinical. Use the patient's name throughout. Write in first-person plural ("we recommend", "our team has reviewed"). Use clear headers, short paragraphs, and bullet points where helpful.
+
+FLAGGED BLOODWORK (outside reference range for this patient):
+${flaggedBlock}
+
+---
+
+## From Your Functional Medicine Doctor
+Analyze the patient's full clinical picture holistically: how conditions connect, how medications interact, and what patterns emerge across symptoms and lab values. ${hasBloodwork ? 'Interpret each relevant bloodwork marker and explain what it means in the context of everything else we know.' : 'Address what you would monitor given their conditions.'} Flag any concerning patterns or nutrient depletions from medications. Minimum 120 words.
+
+## From Your Clinical Nutritionist
+Provide specific, evidence-based nutritional guidance grounded in this patient's conditions, ${hasBloodwork ? 'bloodwork, ' : ''}medications (including drug-nutrient interactions), allergies, and food preferences. Name specific nutrients, foods, or dietary patterns and explain precisely why they are recommended for this individual. Address any deficiencies suggested by ${hasBloodwork ? 'bloodwork or ' : ''}conditions. Reference their dietary restrictions and preferences. Minimum 120 words.
+
+## From Your Personal Trainer
+Assess this patient's fitness starting point given their conditions, exercise history, and goals. Explain the training approach designed for them and why it is specifically appropriate — including any modifications for health conditions, joint concerns, or medication side effects. Outline expected physiological adaptations and timeline. Minimum 100 words.`
+
+  if (needsEndocrinologist) {
+    prompt += `
+
+## From Your Endocrinologist
+Address hormonal, metabolic, and endocrine dimensions of this patient's profile.${endoFlaggedText} Interpret relevant biomarkers with clinical precision — what these values mean for their energy, weight, mood, and long-term risk. Connect the endocrine picture to their conditions, medications, and symptoms. Minimum 120 words.`
+  }
+
+  if (needsCardiologist) {
+    prompt += `
+
+## From Your Cardiologist
+Review this patient's cardiovascular risk profile.${cardioFlaggedText} Interpret their lipid panel and relevant markers in clinical context. Explain cardiovascular risk factors present and what we recommend to address them. Be specific about targets and timeline. Minimum 100 words.`
+  }
+
+  if (needsGastroenterologist) {
+    prompt += `
+
+## From Your Gastroenterologist
+Address this patient's digestive health given their conditions. Explain the gut-systemic connections relevant to their profile. Provide specific guidance on diet, supplements, or lifestyle modifications for their gut condition. Minimum 100 words.`
+  }
+
+  if (needsDermatologist) {
+    prompt += `
+
+## From Your Dermatologist
+Address the patient's skin condition in the context of their full health picture — including gut-skin axis, hormonal influences, and nutritional factors that may be contributing. Provide specific guidance grounded in their lab work and conditions. Minimum 80 words.`
+  }
+
+  if (needsRheumatologist) {
+    prompt += `
+
+## From Your Rheumatologist
+Address the autoimmune and inflammatory dimensions of this patient's profile. Interpret relevant inflammatory markers and explain the connections between their autoimmune condition, lifestyle, and the plan we've designed. Minimum 80 words.`
+  }
+
+  prompt += `
+
+## Priority Action Items for This Week
+List 5 specific, high-impact action items this patient should focus on immediately. Each must be directly grounded in their clinical picture — not generic wellness tips. Include a brief clinical rationale for each. Use bullet points.
+
+## A Note From Your Care Team
+A warm, personal closing paragraph addressed to the patient by name. Acknowledge the complexity of their situation. Validate their goals. Express genuine encouragement and explain what having a coordinated specialist team means for their outcomes. 3-4 sentences.`
+
+  return prompt
+}
+
 export function buildMealSwapPrompt(currentMeal: Record<string, unknown>, mealType: string): string {
   return `The user wants to swap their ${mealType}. The current meal is:
 ${JSON.stringify(currentMeal, null, 2)}
@@ -121,7 +260,8 @@ Generate 3 alternative meals that:
 Return ONLY valid JSON array of 3 meal objects with the same structure as a Meal object:
 [
   { "id": "uuid", "name": "...", "description": "...", "reasoning": "...", "calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0, "fiber_g": 0, "ingredients": ["..."], "image_url": null, "image_prompt": "..." },
-  ...
+  { "id": "uuid", "name": "...", "description": "...", "reasoning": "...", "calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0, "fiber_g": 0, "ingredients": ["..."], "image_url": null, "image_prompt": "..." },
+  { "id": "uuid", "name": "...", "description": "...", "reasoning": "...", "calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0, "fiber_g": 0, "ingredients": ["..."], "image_url": null, "image_prompt": "..." }
 ]`
 }
 
@@ -137,7 +277,7 @@ Generate 3 alternative workout options that:
 
 Return ONLY valid JSON array of 3 WorkoutDay objects:
 [
-  { "type": "workout", "workout_name": "...", "location": "gym|home|class", "duration_mins": 0, "exercises": [...] },
+  { "type": "workout", "workout_name": "...", "location": "gym|home|class", "duration_mins": 0, "exercises": [{ "id": "uuid", "name": "...", "sets": 0, "reps": 0, "rest_seconds": 60, "reasoning": "...", "gif_url": null }] },
   ...
 ]`
 }

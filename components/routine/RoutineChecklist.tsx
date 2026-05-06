@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/Card'
 import { ProgressBar } from '@/components/ui/ProgressBar'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { useRoutine } from '@/hooks/useRoutine'
-import { Pencil, Trash2, Check, X } from 'lucide-react'
+import { Pencil, Trash2, Check, X, Plus } from 'lucide-react'
 import Link from 'next/link'
 
 interface RoutineChecklistProps {
@@ -14,10 +14,13 @@ interface RoutineChecklistProps {
 }
 
 export function RoutineChecklist({ type }: RoutineChecklistProps) {
-  const { items, checkedIds, completion, loading, toggleItem, removeItem, updateItem } = useRoutine(type)
+  const { items, checkedIds, completion, loading, toggleItem, removeItem, updateItem, addItem } = useRoutine(type)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editLabel, setEditLabel] = useState('')
   const [editTime, setEditTime] = useState('')
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [newLabel, setNewLabel] = useState('')
+  const [newTime, setNewTime] = useState('')
   const isComplete = completion === 100 && items.length > 0
 
   const isMorning = type === 'morning'
@@ -40,6 +43,14 @@ export function RoutineChecklist({ type }: RoutineChecklistProps) {
 
   function cancelEdit() {
     setEditingId(null)
+  }
+
+  async function handleAddItem() {
+    if (!newLabel.trim()) return
+    await addItem(newLabel.trim(), newTime.trim())
+    setNewLabel('')
+    setNewTime('')
+    setShowAddForm(false)
   }
 
   if (loading) {
@@ -163,6 +174,45 @@ export function RoutineChecklist({ type }: RoutineChecklistProps) {
               </div>
             )
           })}
+        </div>
+
+        {/* Add item UI */}
+        <div className="mt-3 pt-3 border-t border-gray-100">
+          {showAddForm ? (
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={newLabel}
+                onChange={(e) => setNewLabel(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleAddItem(); if (e.key === 'Escape') setShowAddForm(false) }}
+                autoFocus
+                placeholder="New item..."
+                className="flex-1 px-3 py-1.5 text-sm rounded-lg border border-gray-200 focus:outline-none focus:border-accent-primary"
+              />
+              <input
+                type="text"
+                value={newTime}
+                onChange={(e) => setNewTime(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleAddItem(); if (e.key === 'Escape') setShowAddForm(false) }}
+                placeholder="7:00 AM"
+                className="w-24 px-3 py-1.5 text-sm rounded-lg border border-gray-200 focus:outline-none focus:border-accent-primary"
+              />
+              <button onClick={handleAddItem} className="p-1.5 rounded-lg bg-accent-primary/20 hover:bg-accent-primary/30 text-text-primary transition-colors">
+                <Check size={14} />
+              </button>
+              <button onClick={() => setShowAddForm(false)} className="p-1.5 rounded-lg hover:bg-gray-100 text-text-secondary transition-colors">
+                <X size={14} />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowAddForm(true)}
+              className="flex items-center gap-1.5 text-sm text-accent-primary font-medium hover:underline"
+            >
+              <Plus size={14} />
+              Add item
+            </button>
+          )}
         </div>
       </Card>
 

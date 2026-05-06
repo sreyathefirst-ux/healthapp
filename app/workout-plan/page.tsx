@@ -161,6 +161,26 @@ export default function WorkoutPlanPage() {
     toast('Workout swapped! 🔄', 'success')
   }
 
+  async function handleUpdateDay(day: string, updated: WorkoutDay) {
+    if (!plan) return
+    const updatedPlan = { ...plan, days: { ...plan.days, [day]: updated } }
+    setPlan(updatedPlan)
+
+    try {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const weekStart = getWeekStartDate(weekOffset)
+      await supabase
+        .from('weekly_plans')
+        .update({ workout_plan: updatedPlan })
+        .eq('user_id', user.id)
+        .eq('week_start_date', weekStart)
+    } catch {
+      toast('Failed to save changes', 'error')
+    }
+  }
+
   const weekStart = getWeekStartDate(weekOffset)
   const dayWorkout = plan?.days?.[selectedDay]
 
@@ -257,6 +277,7 @@ export default function WorkoutPlanPage() {
             logStatus={workoutLog[selectedDay]}
             onSwap={openSwapModal}
             onLog={handleLogWorkout}
+            onUpdate={weekOffset === 0 ? handleUpdateDay : undefined}
           />
         )}
       </div>

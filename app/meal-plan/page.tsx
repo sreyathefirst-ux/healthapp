@@ -14,6 +14,22 @@ import { ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react'
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
+function normalizePlan(raw: unknown): MealPlan | null {
+  if (!raw || typeof raw !== 'object') return null
+  const p = raw as Record<string, unknown>
+  if (!p.days || typeof p.days !== 'object') {
+    console.error('[meal-plan] plan has no days object:', JSON.stringify(p).slice(0, 300))
+    return null
+  }
+  const days = p.days as Record<string, unknown>
+  const normalizedDays: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(days)) {
+    normalizedDays[key.toLowerCase()] = value
+  }
+  console.log('[meal-plan] normalized day keys:', Object.keys(normalizedDays))
+  return { ...p, days: normalizedDays } as MealPlan
+}
+
 function getWeekStartDate(offset = 0): string {
   const now = new Date()
   now.setDate(now.getDate() + offset * 7)
@@ -60,7 +76,13 @@ export default function MealPlanPage() {
 
         // maybeSingle returns null data (not an error) when no row found
         if (error) throw error
-        setPlan((data?.meal_plan as MealPlan) ?? null)
+        const raw = data?.meal_plan
+        console.log('[meal-plan] raw from DB — keys:', raw ? Object.keys(raw as object) : 'null')
+        const normalizedPlan = raw ? normalizePlan(raw) : null
+        if (raw && !normalizedPlan) {
+          console.error('[meal-plan] normalization failed — raw:', JSON.stringify(raw).slice(0, 500))
+        }
+        setPlan(normalizedPlan)
 
         const today = new Date().toISOString().split('T')[0]
         const { data: log } = await supabase
@@ -88,7 +110,7 @@ export default function MealPlanPage() {
       const res = await fetch('/api/plans/meal', { method: 'POST' })
       const data = await res.json()
       if (data.success) {
-        setPlan(data.plan)
+        setPlan(normalizePlan(data.plan))
         toast('Meal plan generated! 🥗', 'success')
       } else {
         toast(data.error || 'Failed to generate plan', 'error')

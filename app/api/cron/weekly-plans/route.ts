@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { sendPushNotification } from '@/lib/push'
 import { anthropic, MODEL, buildSystemPrompt } from '@/lib/anthropic'
-import { MEAL_PLAN_PROMPT, WORKOUT_PLAN_PROMPT, HEALTH_REPORT_PROMPT } from '@/lib/prompts'
+import { MEAL_PLAN_PROMPT, WORKOUT_PLAN_PROMPT, buildHealthReportPrompt } from '@/lib/prompts'
 import { fetchFullProfile } from '@/lib/profile'
 import { NextRequest } from 'next/server'
 
@@ -45,13 +45,15 @@ export async function POST(req: NextRequest) {
           .eq('user_id', user.id)
           .limit(50)
 
-        const systemPrompt = buildSystemPrompt(profile, bloodwork || [])
+        const bw = bloodwork || []
+        const systemPrompt = buildSystemPrompt(profile, bw)
+        const reportPrompt = buildHealthReportPrompt(profile, bw)
 
         // Generate all plans in parallel
         await Promise.all([
           generateAndSaveMealPlan(supabase, user.id, systemPrompt, weekStart),
           generateAndSaveWorkoutPlan(supabase, user.id, systemPrompt, weekStart, profile.workout_preferences.days_per_week),
-          generateAndSaveReport(supabase, user.id, systemPrompt, weekStart),
+          generateAndSaveReport(supabase, user.id, systemPrompt, reportPrompt, weekStart),
         ])
 
         // Send push notification
@@ -124,12 +126,12 @@ async function generateAndSaveWorkoutPlan(supabase: any, userId: string, systemP
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function generateAndSaveReport(supabase: any, userId: string, systemPrompt: string, weekStart: string) {
+async function generateAndSaveReport(supabase: any, userId: string, systemPrompt: string, reportPrompt: string, weekStart: string) {
   const response = await anthropic.messages.create({
     model: MODEL,
-    max_tokens: 4096,
+    max_tokens: 8192,
     system: systemPrompt,
-    messages: [{ role: 'user', content: HEALTH_REPORT_PROMPT }],
+    messages: [{ role: 'user', content: reportPrompt }],
   })
   const textBlock = response.content.find((c) => c.type === 'text')
   const text = textBlock?.type === 'text' ? textBlock.text : null
