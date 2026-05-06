@@ -19,7 +19,10 @@ export async function POST(req: Request) {
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
     const profile = await fetchFullProfile(supabase, user.id)
-    if (!profile) return Response.json({ error: 'Profile not found' }, { status: 404 })
+    if (!profile) {
+      console.error('[meal plan] profile not found for user', user.id)
+      return Response.json({ error: 'Profile not found. Please complete onboarding first.' }, { status: 404 })
+    }
 
     const { data: bloodwork } = await supabase
       .from('bloodwork')
@@ -51,23 +54,29 @@ export async function POST(req: Request) {
     let plan: MealPlan
     try {
       const jsonMatch = textContent.text.match(/\{[\s\S]*\}/)
-      if (!jsonMatch) throw new Error('No JSON found')
+      if (!jsonMatch) throw new Error('No JSON found in Claude response')
       plan = JSON.parse(jsonMatch[0])
-    } catch {
+    } catch (parseErr) {
+      console.error('[meal plan] JSON parse error:', parseErr, '\nRaw response:', textContent.text.slice(0, 500))
       return Response.json({ error: 'Failed to parse meal plan JSON' }, { status: 500 })
     }
 
-    // Save to weekly_plans
-    const { error: saveError } = await supabase.from('weekly_plans').upsert({
-      user_id: user.id,
-      week_start_date: weekStart,
-      meal_plan: plan,
-      generated_at: new Date().toISOString(),
-    })
+    // Save to weekly_plans — onConflict ensures UPDATE when row already exists for this week
+    const { error: saveError } = await supabase.from('weekly_plans').upsert(
+      {
+        user_id: user.id,
+        week_start_date: weekStart,
+        meal_plan: plan,
+        generated_at: new Date().toISOString(),
+      },
+      { onConflict: 'user_id,week_start_date' }
+    )
 
     if (saveError) {
+      console.error('[meal plan] upsert error:', saveError)
       return Response.json({ error: saveError.message }, { status: 500 })
     }
+    console.log('[meal plan] saved for week', weekStart)
 
     // Trigger image generation in background (non-blocking)
     triggerMealImageGeneration(plan, user.id).catch(console.error)

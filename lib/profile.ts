@@ -3,11 +3,11 @@ import { UserProfile } from '@/types'
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function fetchFullProfile(supabase: any, userId: string): Promise<UserProfile | null> {
   const [userRes, medRes, foodRes, workoutRes, routineRes] = await Promise.all([
-    supabase.from('users').select('*').eq('id', userId).single(),
-    supabase.from('medical_profile').select('*').eq('user_id', userId).single(),
-    supabase.from('food_preferences').select('*').eq('user_id', userId).single(),
-    supabase.from('workout_preferences').select('*').eq('user_id', userId).single(),
-    supabase.from('routine_preferences').select('*').eq('user_id', userId).single(),
+    supabase.from('users').select('*').eq('id', userId).maybeSingle(),
+    supabase.from('medical_profile').select('*').eq('user_id', userId).maybeSingle(),
+    supabase.from('food_preferences').select('*').eq('user_id', userId).maybeSingle(),
+    supabase.from('workout_preferences').select('*').eq('user_id', userId).maybeSingle(),
+    supabase.from('routine_preferences').select('*').eq('user_id', userId).maybeSingle(),
   ])
 
   if (!userRes.data) return null

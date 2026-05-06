@@ -96,7 +96,10 @@ async function generateAndSaveMealPlan(supabase: any, userId: string, systemProm
   const jsonMatch = text.match(/\{[\s\S]*\}/)
   if (!jsonMatch) return
   const plan = JSON.parse(jsonMatch[0])
-  await supabase.from('weekly_plans').upsert({ user_id: userId, week_start_date: weekStart, meal_plan: plan })
+  await supabase.from('weekly_plans').upsert(
+    { user_id: userId, week_start_date: weekStart, meal_plan: plan },
+    { onConflict: 'user_id,week_start_date' }
+  )
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -114,7 +117,10 @@ async function generateAndSaveWorkoutPlan(supabase: any, userId: string, systemP
   const jsonMatch = text.match(/\{[\s\S]*\}/)
   if (!jsonMatch) return
   const plan = JSON.parse(jsonMatch[0])
-  await supabase.from('weekly_plans').upsert({ user_id: userId, week_start_date: weekStart, workout_plan: plan })
+  await supabase.from('weekly_plans').upsert(
+    { user_id: userId, week_start_date: weekStart, workout_plan: plan },
+    { onConflict: 'user_id,week_start_date' }
+  )
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -128,5 +134,8 @@ async function generateAndSaveReport(supabase: any, userId: string, systemPrompt
   const textBlock = response.content.find((c) => c.type === 'text')
   const text = textBlock?.type === 'text' ? textBlock.text : null
   if (!text) return
-  await supabase.from('weekly_plans').upsert({ user_id: userId, week_start_date: weekStart, health_report: text })
+  await supabase.from('weekly_plans').upsert(
+    { user_id: userId, week_start_date: weekStart, health_report: text },
+    { onConflict: 'user_id,week_start_date' }
+  )
 }
