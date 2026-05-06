@@ -10,9 +10,19 @@ export async function fetchFullProfile(supabase: any, userId: string): Promise<U
     supabase.from('routine_preferences').select('*').eq('user_id', userId).maybeSingle(),
   ])
 
-  if (!userRes.data) return null
+  // Log errors for every sub-table so we know exactly what's missing
+  if (userRes.error) console.error('[profile] users query error:', userRes.error.message, userRes.error.details)
+  if (medRes.error) console.error('[profile] medical_profile query error:', medRes.error.message, medRes.error.details)
+  if (foodRes.error) console.error('[profile] food_preferences query error:', foodRes.error.message, foodRes.error.details)
+  if (workoutRes.error) console.error('[profile] workout_preferences query error:', workoutRes.error.message, workoutRes.error.details)
+  if (routineRes.error) console.error('[profile] routine_preferences query error:', routineRes.error.message, routineRes.error.details)
 
-  return {
+  if (!userRes.data) {
+    console.error('[profile] users row not found for userId:', userId)
+    return null
+  }
+
+  const profile: UserProfile = {
     id: userId,
     name: userRes.data.name || '',
     age: userRes.data.age || 0,
@@ -51,4 +61,21 @@ export async function fetchFullProfile(supabase: any, userId: string): Promise<U
       night_items: routineRes.data?.night_items || [],
     },
   }
+
+  // Log a summary so we can see what data Claude will receive
+  console.log('[profile] loaded for', userId, {
+    name: profile.name || '(empty)',
+    age: profile.age || '(empty)',
+    conditions: profile.medical_profile.conditions.length,
+    medications: profile.medical_profile.medications.length,
+    restrictions: profile.food_preferences.restrictions.length,
+    allergies: profile.food_preferences.allergies.length,
+    workoutGoals: profile.workout_preferences.goals.length,
+    hasMedicalProfile: !!medRes.data,
+    hasFoodPrefs: !!foodRes.data,
+    hasWorkoutPrefs: !!workoutRes.data,
+    hasRoutinePrefs: !!routineRes.data,
+  })
+
+  return profile
 }

@@ -12,6 +12,15 @@ function getWeekStartDate(): string {
   return monday.toISOString().split('T')[0]
 }
 
+function extractJson(text: string): unknown {
+  try { return JSON.parse(text.trim()) } catch { /* continue */ }
+  const stripped = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim()
+  try { return JSON.parse(stripped) } catch { /* continue */ }
+  const match = text.match(/\{[\s\S]*\}/)
+  if (match) return JSON.parse(match[0])
+  throw new Error('No valid JSON found in response')
+}
+
 export async function POST(_req: Request) {
   try {
     const supabase = createClient()
@@ -24,6 +33,18 @@ export async function POST(_req: Request) {
       return Response.json({ error: 'Profile not found. Please complete onboarding first.' }, { status: 404 })
     }
 
+    console.log('[workout plan] profile summary for', user.id, {
+      name: profile.name || '(empty)',
+      age: profile.age || '(empty)',
+      workoutGoals: profile.workout_preferences.goals,
+      activityTypes: profile.workout_preferences.activity_types,
+      daysPerWeek: profile.workout_preferences.days_per_week,
+      gymAccess: profile.workout_preferences.gym_access,
+      homeEquipment: profile.workout_preferences.home_equipment,
+      preferredDurationMins: profile.workout_preferences.preferred_duration_mins,
+      conditions: profile.medical_profile.conditions,
+    })
+
     const { data: bloodwork } = await supabase
       .from('bloodwork')
       .select('*')
@@ -32,41 +53,75 @@ export async function POST(_req: Request) {
       .limit(50)
 
     const systemPrompt = buildSystemPrompt(profile, bloodwork || [])
-    const weekStart = getWeekStartDate()
+    console.log('[workout plan] system prompt length:', systemPrompt.length, 'chars')
 
+    const weekStart = getWeekStartDate()
     const fullPrompt = WORKOUT_PLAN_PROMPT.replace(
       '${workout_preferences.days_per_week}',
       String(profile.workout_preferences.days_per_week)
     )
+    const userMessage = `${fullPrompt}\n\nThe week_start_date should be: ${weekStart}`
 
-    const response = await anthropic.messages.create({
+    let rawText: string | null = null
+
+    const firstResponse = await anthropic.messages.create({
       model: MODEL,
       max_tokens: 8192,
       system: systemPrompt,
-      messages: [
-        {
-          role: 'user',
-          content: `${fullPrompt}\n\nThe week_start_date should be: ${weekStart}`,
-        },
-      ],
+      messages: [{ role: 'user', content: userMessage }],
     })
+    const firstBlock = firstResponse.content.find((c) => c.type === 'text')
+    rawText = firstBlock?.type === 'text' ? firstBlock.text : null
 
-    const textContent = response.content.find((c) => c.type === 'text')
-    if (!textContent || textContent.type !== 'text') {
+    if (!rawText) {
+      console.error('[workout plan] Claude returned no text content')
       return Response.json({ error: 'Failed to generate workout plan' }, { status: 500 })
     }
 
-    let plan: WorkoutPlan
+    let plan: WorkoutPlan | null = null
+
     try {
-      const jsonMatch = textContent.text.match(/\{[\s\S]*\}/)
-      if (!jsonMatch) throw new Error('No JSON found in Claude response')
-      plan = JSON.parse(jsonMatch[0])
+      plan = extractJson(rawText) as WorkoutPlan
     } catch (parseErr) {
-      console.error('[workout plan] JSON parse error:', parseErr, '\nRaw response:', textContent.text.slice(0, 500))
-      return Response.json({ error: 'Failed to parse workout plan JSON' }, { status: 500 })
+      console.error('[workout plan] JSON parse failed on first attempt:', parseErr)
+      console.error('[workout plan] raw Claude response (first 2000 chars):', rawText.slice(0, 2000))
+
+      console.log('[workout plan] retrying with strict JSON prompt...')
+      const retryResponse = await anthropic.messages.create({
+        model: MODEL,
+        max_tokens: 8192,
+        system: systemPrompt,
+        messages: [
+          { role: 'user', content: userMessage },
+          { role: 'assistant', content: rawText },
+          {
+            role: 'user',
+            content: 'Return ONLY raw JSON. No markdown, no backticks, no explanation, nothing else. Just the JSON object.',
+          },
+        ],
+      })
+      const retryBlock = retryResponse.content.find((c) => c.type === 'text')
+      const retryText = retryBlock?.type === 'text' ? retryBlock.text : null
+
+      if (!retryText) {
+        console.error('[workout plan] retry returned no text')
+        return Response.json({ error: 'Failed to generate workout plan JSON' }, { status: 500 })
+      }
+
+      try {
+        plan = extractJson(retryText) as WorkoutPlan
+        console.log('[workout plan] retry JSON parse succeeded')
+      } catch (retryParseErr) {
+        console.error('[workout plan] retry JSON parse also failed:', retryParseErr)
+        console.error('[workout plan] retry raw response (first 2000 chars):', retryText.slice(0, 2000))
+        return Response.json({ error: 'Failed to parse workout plan JSON after retry' }, { status: 500 })
+      }
     }
 
-    // Save to weekly_plans — onConflict ensures UPDATE when row already exists for this week
+    if (!plan) {
+      return Response.json({ error: 'Failed to generate workout plan' }, { status: 500 })
+    }
+
     const { error: saveError } = await supabase.from('weekly_plans').upsert(
       {
         user_id: user.id,
@@ -78,14 +133,14 @@ export async function POST(_req: Request) {
     )
 
     if (saveError) {
-      console.error('[workout plan] upsert error:', saveError)
+      console.error('[workout plan] upsert error:', saveError.message, saveError.details)
       return Response.json({ error: saveError.message }, { status: 500 })
     }
-    console.log('[workout plan] saved for week', weekStart)
+    console.log('[workout plan] saved for week', weekStart, '— days:', Object.keys(plan.days || {}).length)
 
     return Response.json({ success: true, plan })
   } catch (error) {
-    console.error('Workout plan generation error:', error)
+    console.error('[workout plan] unhandled error:', error)
     return Response.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
