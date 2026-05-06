@@ -70,6 +70,7 @@ export function PetSelector() {
       fetch('/api/plans/meal', { method: 'POST' }),
       fetch('/api/plans/workout', { method: 'POST' }),
       fetch('/api/plans/report', { method: 'POST' }),
+      fetch('/api/plans/routine', { method: 'POST' }),
     ])
 
     router.push('/onboarding/results')

@@ -15,7 +15,7 @@ export async function PATCH(req: Request) {
       .select('*')
       .eq('user_id', user.id)
       .eq('date', logDate)
-      .single()
+      .maybeSingle()
 
     const checkedField = type === 'morning' ? 'morning_items_checked' : 'night_items_checked'
     const completionField = type === 'morning' ? 'morning_routine_completion' : 'night_routine_completion'
@@ -33,19 +33,22 @@ export async function PATCH(req: Request) {
       .from('routine_preferences')
       .select('morning_items, night_items')
       .eq('user_id', user.id)
-      .single()
+      .maybeSingle()
 
     const itemsKey = type === 'morning' ? 'morning_items' : 'night_items'
     const totalItems = (routinePrefs?.[itemsKey] as unknown[])?.length || 1
     const completion = Math.round((currentChecked.length / totalItems) * 100)
 
-    await supabase.from('daily_logs').upsert({
-      user_id: user.id,
-      date: logDate,
-      [checkedField]: currentChecked,
-      [completionField]: completion,
-      last_seen_at: new Date().toISOString(),
-    })
+    await supabase.from('daily_logs').upsert(
+      {
+        user_id: user.id,
+        date: logDate,
+        [checkedField]: currentChecked,
+        [completionField]: completion,
+        last_seen_at: new Date().toISOString(),
+      },
+      { onConflict: 'user_id,date' }
+    )
 
     return Response.json({ completion })
   } catch (error) {

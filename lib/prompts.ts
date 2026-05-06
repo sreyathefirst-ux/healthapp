@@ -83,6 +83,31 @@ List 5 specific, high-impact action items this patient should focus on immediate
 ## A Note From Your Care Team
 A warm, personal closing paragraph addressed to the patient by name. Acknowledge the full complexity of their situation. Validate their specific goals. Express genuine encouragement and explain what having a coordinated specialist team means for their outcomes. 3-4 sentences.`
 
+export const ROUTINE_PROMPT = `Generate a personalized daily routine checklist for this user — a morning routine and a night routine.
+
+Return ONLY valid JSON matching this exact structure — no markdown, no explanation:
+{
+  "morning_items": [
+    { "id": "uuid", "label": "Drink 16oz water", "time_target": "7:00 AM" }
+  ],
+  "night_items": [
+    { "id": "uuid", "label": "Take magnesium glycinate 400mg", "time_target": "9:30 PM" }
+  ]
+}
+
+Rules:
+- morning_items should begin at or just after the user's wake_time, spanning the first 60-90 minutes of their day
+- night_items should span the 60-90 minutes before the user's sleep_time
+- Include their specific medications with correct timing (e.g. levothyroxine must be taken on an empty stomach 30-60 min before food; metformin with food; statins at night)
+- Include their supplements with appropriate timing
+- Include items tailored to their medical conditions (e.g. blood glucose check for diabetes, weigh-in for weight management, stretching for joint conditions)
+- Reference the habits they mentioned during onboarding
+- 6-10 items per routine is ideal — thorough but not overwhelming
+- Labels must be specific and actionable: "Take levothyroxine 50mcg on empty stomach" not "Take medication"
+- time_target must use 12-hour format: "7:00 AM", "9:30 PM"
+- Use real UUID-like strings for ids (e.g. "a1b2c3d4-e5f6-7890-abcd-ef1234567890")
+- Do NOT include exercise or meals — those are handled separately`
+
 export function buildMealSwapPrompt(currentMeal: Record<string, unknown>, mealType: string): string {
   return `The user wants to swap their ${mealType}. The current meal is:
 ${JSON.stringify(currentMeal, null, 2)}
