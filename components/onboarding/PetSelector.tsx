@@ -72,7 +72,7 @@ export function PetSelector() {
       fetch('/api/plans/report', { method: 'POST' }),
     ])
 
-    router.push('/')
+    router.push('/onboarding/results')
   }
 
   if (generatingPlans) {

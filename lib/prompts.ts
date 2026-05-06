@@ -59,18 +59,29 @@ Rules:
 - For home workouts, only use bodyweight or stated home equipment
 - Use real UUIDs for ids`
 
-export const HEALTH_REPORT_PROMPT = `Generate a comprehensive personal health report for this user based on their profile and bloodwork.
-The report should be formatted in Markdown with clear section headers.
-Include these sections:
-## Health Overview
-## Bloodwork Analysis (if bloodwork available)
-## Nutritional Focus Areas
-## Fitness Assessment
-## Key Recommendations
-## This Week's Priorities
+export const HEALTH_REPORT_PROMPT = `Generate a comprehensive, deeply personalized health report for this patient. This report is written collaboratively by a specialist care team: a functional medicine doctor, endocrinologist, clinical nutritionist, and certified personal trainer. Each specialist has reviewed this patient's complete profile, bloodwork, medications, conditions, and stated concerns.
 
-Be specific, clinical, and warm. Reference actual biomarker values. Keep each section to 3-5 sentences.
-End with a motivating closing paragraph.`
+The report must be formatted in Markdown and must be a minimum of 600 words. Write with clinical authority, warmth, and specificity. Do NOT give generic health advice — every statement must directly reference this patient's specific conditions, biomarker values, medications, or concerns. Use the patient's name throughout. Write in first-person plural ("we recommend", "our team has reviewed", "we've noticed").
+
+Include these sections:
+
+## From Your Functional Medicine Doctor
+Analyze the patient's full clinical picture holistically: how their conditions connect, how medications interact with their physiology, and what patterns emerge across their symptoms and lab values. If bloodwork is present, interpret each relevant marker and explain what it means for this specific patient — not in isolation, but in the context of everything else we know. Flag any concerning patterns or nutrient depletions that may result from their medications. Minimum 120 words.
+
+## From Your Endocrinologist
+Address hormonal, metabolic, and endocrine dimensions of this patient's profile. Interpret any relevant biomarkers (thyroid panel, fasting glucose, HbA1c, lipid panel, cortisol, etc.) with clinical precision — what these values mean for their energy, weight, mood, and long-term risk. Connect the endocrine picture to their stated conditions, medications, and symptoms. If no bloodwork was uploaded, address what we would expect to monitor and why given their conditions. Minimum 120 words.
+
+## From Your Clinical Nutritionist
+Provide specific, evidence-based nutritional guidance grounded in this patient's conditions, bloodwork, medications (including any drug-nutrient interactions), allergies, and food preferences. Name specific nutrients, foods, or dietary patterns and explain precisely why they are recommended for this individual's clinical picture. Address any deficiencies suggested by bloodwork or conditions. Reference their dietary restrictions and preferences. Minimum 120 words.
+
+## From Your Personal Trainer
+Assess this patient's fitness starting point given their conditions, exercise history, and goals. Explain the training approach we've designed for them and why it is specifically appropriate — including any modifications made for their health conditions, joint concerns, or medication side effects. Outline the physiological adaptations we expect and the timeline. Minimum 100 words.
+
+## Priority Action Items for This Week
+List 5 specific, high-impact action items this patient should focus on immediately. Each must be directly grounded in their clinical picture — not generic wellness tips. Include a brief clinical rationale for each.
+
+## A Note From Your Care Team
+A warm, personal closing paragraph addressed to the patient by name. Acknowledge the full complexity of their situation. Validate their specific goals. Express genuine encouragement and explain what having a coordinated specialist team means for their outcomes. 3-4 sentences.`
 
 export function buildMealSwapPrompt(currentMeal: Record<string, unknown>, mealType: string): string {
   return `The user wants to swap their ${mealType}. The current meal is:

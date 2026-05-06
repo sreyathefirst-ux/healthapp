@@ -32,7 +32,7 @@ export async function POST(_req: Request) {
 
     const response = await anthropic.messages.create({
       model: MODEL,
-      max_tokens: 4096,
+      max_tokens: 8192,
       system: systemPrompt,
       messages: [{ role: 'user', content: HEALTH_REPORT_PROMPT }],
     })
@@ -42,12 +42,15 @@ export async function POST(_req: Request) {
       return Response.json({ error: 'Failed to generate health report' }, { status: 500 })
     }
 
-    await supabase.from('weekly_plans').upsert({
-      user_id: user.id,
-      week_start_date: weekStart,
-      health_report: textContent.text,
-      generated_at: new Date().toISOString(),
-    })
+    await supabase.from('weekly_plans').upsert(
+      {
+        user_id: user.id,
+        week_start_date: weekStart,
+        health_report: textContent.text,
+        generated_at: new Date().toISOString(),
+      },
+      { onConflict: 'user_id,week_start_date' }
+    )
 
     return Response.json({ success: true, report: textContent.text })
   } catch (error) {
