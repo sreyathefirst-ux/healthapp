@@ -1,0 +1,13 @@
+{
+  "name": "Vitalia",
+  "short_name": "Vitalia",
+  "description": "Your personal AI health companion",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F5F0FF",
+  "theme_color": "#C9B8FF",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

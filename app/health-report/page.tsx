@@ -1,0 +1,132 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { AppShell } from '@/components/layout/AppShell'
+import { Card } from '@/components/ui/Card'
+import { Button } from '@/components/ui/Button'
+import { createClient } from '@/lib/supabase/client'
+import { useToast } from '@/components/ui/Toast'
+import { Skeleton } from '@/components/ui/Skeleton'
+import { RefreshCw, ChevronDown } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
+
+interface PastReport {
+  id: string
+  week_start_date: string
+  health_report: string | null
+}
+
+export default function HealthReportPage() {
+  const { toast } = useToast()
+  const [report, setReport] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [regenerating, setRegenerating] = useState(false)
+  const [pastReports, setPastReports] = useState<PastReport[]>([])
+  const [showDropdown, setShowDropdown] = useState(false)
+
+  useEffect(() => {
+    async function fetchReport() {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { setLoading(false); return }
+
+      const { data } = await supabase
+        .from('weekly_plans')
+        .select('id, week_start_date, health_report')
+        .eq('user_id', user.id)
+        .not('health_report', 'is', null)
+        .order('week_start_date', { ascending: false })
+
+      if (data && data.length > 0) {
+        setReport(data[0].health_report)
+        setPastReports(data as PastReport[])
+      }
+      setLoading(false)
+    }
+    fetchReport()
+  }, [])
+
+  async function handleRegenerate() {
+    setRegenerating(true)
+    try {
+      const res = await fetch('/api/plans/report', { method: 'POST' })
+      const data = await res.json()
+      if (data.success) {
+        setReport(data.report)
+        toast('Health report updated! 📋', 'success')
+      } else {
+        toast('Failed to generate report', 'error')
+      }
+    } catch {
+      toast('Something went wrong', 'error')
+    } finally {
+      setRegenerating(false)
+    }
+  }
+
+  return (
+    <AppShell>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-text-primary">Health Report</h1>
+          <div className="flex gap-2">
+            {pastReports.length > 1 && (
+              <div className="relative">
+                <Button variant="secondary" size="sm" onClick={() => setShowDropdown(!showDropdown)}>
+                  <ChevronDown size={14} />
+                  Past Reports
+                </Button>
+                {showDropdown && (
+                  <div className="absolute right-0 top-10 bg-white rounded-xl shadow-card border border-gray-100 z-10 min-w-[180px]">
+                    {pastReports.map((r) => (
+                      <button
+                        key={r.id}
+                        onClick={() => {
+                          setReport(r.health_report)
+                          setShowDropdown(false)
+                        }}
+                        className="w-full text-left px-4 py-2.5 text-sm hover:bg-bg transition-colors first:rounded-t-xl last:rounded-b-xl"
+                      >
+                        Week of {new Date(r.week_start_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            <Button variant="secondary" size="sm" onClick={handleRegenerate} loading={regenerating}>
+              <RefreshCw size={14} />
+              Update
+            </Button>
+          </div>
+        </div>
+
+        {loading ? (
+          <Card>
+            <Skeleton lines={8} />
+          </Card>
+        ) : !report ? (
+          <div className="text-center py-16">
+            <span className="text-5xl block mb-4">📋</span>
+            <h3 className="font-semibold text-text-primary mb-2">No health report yet</h3>
+            <p className="text-text-secondary mb-6">Generate your personalized health insights</p>
+            <Button onClick={handleRegenerate} loading={regenerating}>Generate Report</Button>
+          </div>
+        ) : (
+          <>
+            <Card>
+              <div className="prose prose-sm max-w-none text-text-primary [&_h2]:text-accent-primary [&_h2]:font-bold [&_h2]:text-lg [&_h2]:mt-6 [&_h2]:mb-3 [&_h2]:pb-2 [&_h2]:border-b [&_h2]:border-accent-primary/30 [&_p]:text-text-secondary [&_p]:leading-relaxed [&_ul]:text-text-secondary [&_li]:leading-relaxed [&_strong]:text-text-primary">
+                <ReactMarkdown>{report}</ReactMarkdown>
+              </div>
+            </Card>
+
+            {/* Disclaimer */}
+            <div className="bg-accent-coral/20 rounded-xl p-4 text-xs text-orange-700 leading-relaxed sticky bottom-24 md:bottom-4">
+              <strong>Medical Disclaimer:</strong> This report is generated by AI for informational purposes only and should not be considered medical advice. Always consult with a qualified healthcare provider before making changes to your diet, exercise routine, or health regimen. Vitalia is not a substitute for professional medical care.
+            </div>
+          </>
+        )}
+      </div>
+    </AppShell>
+  )
+}
