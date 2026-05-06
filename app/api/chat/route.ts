@@ -3,70 +3,90 @@ import { buildOnboardingSystemPrompt } from '@/lib/prompts'
 import { createClient } from '@/lib/supabase/server'
 
 export async function POST(req: Request) {
-  const { messages, step } = await req.json()
+  try {
+    const { messages, step } = await req.json()
 
-  const stepGoals: Record<number, string> = {
-    1: 'Collect name, age, height, weight, medical conditions, medications, supplements',
-    2: 'Ask about bloodwork upload',
-    3: 'Collect health concerns and at least 3 health goals',
-    4: 'Collect all food preferences (restrictions, allergies, cuisines, dislikes, meal prep days)',
-    5: 'Collect all workout preferences (goals, activities, days/week, gym access, equipment, duration)',
-    6: 'Collect routine preferences (wake time, sleep time, morning/night habits)',
-    7: 'Tell the user to select their virtual pet companion',
-  }
+    const stepGoals: Record<number, string> = {
+      1: 'Collect name, age, height, weight, medical conditions, medications, supplements',
+      2: 'Ask about bloodwork upload',
+      3: 'Collect health concerns and at least 3 health goals',
+      4: 'Collect all food preferences (restrictions, allergies, cuisines, dislikes, meal prep days)',
+      5: 'Collect all workout preferences (goals, activities, days/week, gym access, equipment, duration)',
+      6: 'Collect routine preferences (wake time, sleep time, morning/night habits)',
+      7: 'Tell the user to select their virtual pet companion',
+    }
 
-  const systemPrompt = buildOnboardingSystemPrompt(step, stepGoals[step] || '')
+    const systemPrompt = buildOnboardingSystemPrompt(step, stepGoals[step] || '')
 
-  const stream = await anthropic.messages.stream({
-    model: MODEL,
-    max_tokens: 1024,
-    system: systemPrompt,
-    messages: messages.map((m: { role: string; content: string }) => ({
+    // Anthropic API requires the first message to have role: 'user'.
+    // The frontend initializes state with an assistant greeting, so strip any
+    // leading assistant turns before sending to the API.
+    const allMessages = (messages as { role: string; content: string }[]).map((m) => ({
       role: m.role as 'user' | 'assistant',
       content: m.content,
-    })),
-  })
+    }))
+    const firstUserIdx = allMessages.findIndex((m) => m.role === 'user')
+    const apiMessages = firstUserIdx >= 0 ? allMessages.slice(firstUserIdx) : allMessages
 
-  const encoder = new TextEncoder()
-  const readableStream = new ReadableStream({
-    async start(controller) {
-      for await (const chunk of stream) {
-        if (
-          chunk.type === 'content_block_delta' &&
-          chunk.delta.type === 'text_delta'
-        ) {
-          controller.enqueue(encoder.encode(chunk.delta.text))
-        }
-      }
+    if (apiMessages.length === 0) {
+      return Response.json({ error: 'No user message to process' }, { status: 400 })
+    }
 
-      // After streaming completes, parse step_complete and persist data
-      const fullText = await stream.finalText()
-      const stepCompleteMatch = fullText.match(/<step_complete>([\s\S]*?)<\/step_complete>/)
-      if (stepCompleteMatch) {
+    const stream = anthropic.messages.stream({
+      model: MODEL,
+      max_tokens: 1024,
+      system: systemPrompt,
+      messages: apiMessages,
+    })
+
+    const encoder = new TextEncoder()
+    const readableStream = new ReadableStream({
+      async start(controller) {
         try {
-          const stepData = JSON.parse(stepCompleteMatch[1])
-          const supabase = createClient()
-          const { data: { user }, error: authErr } = await supabase.auth.getUser()
-
-          if (authErr) {
-            console.error(`[chat] auth error on step ${step}:`, authErr.message)
-          } else if (user && stepData.data) {
-            await saveStepData(supabase, user.id, stepData.step, stepData.data)
-          } else if (!user) {
-            console.error(`[chat] no user found when saving step ${step}`)
+          for await (const chunk of stream) {
+            if (
+              chunk.type === 'content_block_delta' &&
+              chunk.delta.type === 'text_delta'
+            ) {
+              controller.enqueue(encoder.encode(chunk.delta.text))
+            }
           }
-        } catch (parseErr) {
-          console.error(`[chat] failed to parse step_complete block on step ${step}:`, parseErr)
+
+          // After streaming completes, parse step_complete and persist data
+          const fullText = await stream.finalText()
+          const stepCompleteMatch = fullText.match(/<step_complete>([\s\S]*?)<\/step_complete>/)
+          if (stepCompleteMatch) {
+            try {
+              const stepData = JSON.parse(stepCompleteMatch[1])
+              const supabase = createClient()
+              const { data: { user }, error: authErr } = await supabase.auth.getUser()
+
+              if (authErr) {
+                console.error(`[chat] auth error on step ${step}:`, authErr.message)
+              } else if (user && stepData.data) {
+                await saveStepData(supabase, user.id, stepData.step, stepData.data)
+              } else if (!user) {
+                console.error(`[chat] no user found when saving step ${step}`)
+              }
+            } catch (parseErr) {
+              console.error(`[chat] failed to parse step_complete block on step ${step}:`, parseErr)
+            }
+          }
+        } catch (streamErr) {
+          console.error('[chat] stream error:', streamErr)
+        } finally {
+          controller.close()
         }
-      }
+      },
+    })
 
-      controller.close()
-    },
-  })
-
-  return new Response(readableStream, {
-    headers: { 'Content-Type': 'text/plain; charset=utf-8' },
-  })
+    return new Response(readableStream, {
+      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+    })
+  } catch (error) {
+    console.error('[chat] unhandled error:', error)
+    return Response.json({ error: 'Internal server error. Please try again.' }, { status: 500 })
+  }
 }
 
 async function saveStepData(
