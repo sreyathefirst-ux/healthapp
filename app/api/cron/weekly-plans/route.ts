@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { sendPushNotification } from '@/lib/push'
-import { anthropic, MODEL, buildSystemPrompt } from '@/lib/anthropic'
+import { buildSystemPrompt } from '@/lib/anthropic'
+import { callOpenRouter, MODEL } from '@/lib/openrouter'
 import { MEAL_PLAN_PROMPT, WORKOUT_PLAN_PROMPT, buildHealthReportPrompt } from '@/lib/prompts'
 import { fetchFullProfile } from '@/lib/profile'
 import { NextRequest } from 'next/server'
@@ -86,14 +87,10 @@ export async function POST(req: NextRequest) {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function generateAndSaveMealPlan(supabase: any, userId: string, systemPrompt: string, weekStart: string) {
-  const response = await anthropic.messages.create({
-    model: MODEL,
-    max_tokens: 8192,
-    system: systemPrompt,
-    messages: [{ role: 'user', content: `${MEAL_PLAN_PROMPT}\n\nThe week_start_date should be: ${weekStart}` }],
-  })
-  const textBlock = response.content.find((c) => c.type === 'text')
-  const text = textBlock?.type === 'text' ? textBlock.text : null
+  const { text } = await callOpenRouter(
+    [{ role: 'system', content: systemPrompt }, { role: 'user', content: `${MEAL_PLAN_PROMPT}\n\nThe week_start_date should be: ${weekStart}` }],
+    8192
+  )
   if (!text) return
   const jsonMatch = text.match(/\{[\s\S]*\}/)
   if (!jsonMatch) return
@@ -107,14 +104,10 @@ async function generateAndSaveMealPlan(supabase: any, userId: string, systemProm
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function generateAndSaveWorkoutPlan(supabase: any, userId: string, systemPrompt: string, weekStart: string, daysPerWeek: number) {
   const prompt = WORKOUT_PLAN_PROMPT.replace('${workout_preferences.days_per_week}', String(daysPerWeek))
-  const response = await anthropic.messages.create({
-    model: MODEL,
-    max_tokens: 8192,
-    system: systemPrompt,
-    messages: [{ role: 'user', content: `${prompt}\n\nThe week_start_date should be: ${weekStart}` }],
-  })
-  const textBlock = response.content.find((c) => c.type === 'text')
-  const text = textBlock?.type === 'text' ? textBlock.text : null
+  const { text } = await callOpenRouter(
+    [{ role: 'system', content: systemPrompt }, { role: 'user', content: `${prompt}\n\nThe week_start_date should be: ${weekStart}` }],
+    8192
+  )
   if (!text) return
   const jsonMatch = text.match(/\{[\s\S]*\}/)
   if (!jsonMatch) return
@@ -127,14 +120,10 @@ async function generateAndSaveWorkoutPlan(supabase: any, userId: string, systemP
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function generateAndSaveReport(supabase: any, userId: string, systemPrompt: string, reportPrompt: string, weekStart: string) {
-  const response = await anthropic.messages.create({
-    model: MODEL,
-    max_tokens: 8192,
-    system: systemPrompt,
-    messages: [{ role: 'user', content: reportPrompt }],
-  })
-  const textBlock = response.content.find((c) => c.type === 'text')
-  const text = textBlock?.type === 'text' ? textBlock.text : null
+  const { text } = await callOpenRouter(
+    [{ role: 'system', content: systemPrompt }, { role: 'user', content: reportPrompt }],
+    8192
+  )
   if (!text) return
   await supabase.from('weekly_plans').upsert(
     { user_id: userId, week_start_date: weekStart, health_report: text },

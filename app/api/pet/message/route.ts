@@ -1,4 +1,4 @@
-import { anthropic, MODEL } from '@/lib/anthropic'
+import { callOpenRouter } from '@/lib/openrouter'
 import { buildPetMessagePrompt } from '@/lib/prompts'
 import { createClient } from '@/lib/supabase/server'
 
@@ -12,14 +12,8 @@ export async function POST(req: Request) {
 
     const prompt = buildPetMessagePrompt({ petName, petType, petState, completionPercent, currentStreak })
 
-    const response = await anthropic.messages.create({
-      model: MODEL,
-      max_tokens: 256,
-      messages: [{ role: 'user', content: prompt }],
-    })
-
-    const textContent = response.content.find((c) => c.type === 'text')
-    const message = textContent?.type === 'text' ? textContent.text : 'Hi there! 🐾'
+    const { text } = await callOpenRouter([{ role: 'user', content: prompt }], 256)
+    const message = text ?? 'Hi there! 🐾'
 
     return Response.json({ message })
   } catch (error) {

@@ -1,4 +1,5 @@
-import { anthropic, MODEL, buildSystemPrompt } from '@/lib/anthropic'
+import { buildSystemPrompt } from '@/lib/anthropic'
+import { callOpenRouter, MODEL } from '@/lib/openrouter'
 import { MEAL_PLAN_PROMPT } from '@/lib/prompts'
 import { createClient } from '@/lib/supabase/server'
 import { fetchFullProfile } from '@/lib/profile'
@@ -58,15 +59,10 @@ Use this compact structure with all 7 days (monday through sunday):
 CRITICAL: ALL 7 days must be fully populated. Respect all allergies. Keep descriptions brief (1 sentence). Keep reasoning brief (1 sentence).`
 
 async function callClaude(systemPrompt: string, userMessage: string, maxTokens: number) {
-  const response = await anthropic.messages.create({
-    model: MODEL,
-    max_tokens: maxTokens,
-    system: systemPrompt,
-    messages: [{ role: 'user', content: userMessage }],
-  })
-  const block = response.content.find((c) => c.type === 'text')
-  const text = block?.type === 'text' ? block.text : null
-  return { text, stopReason: response.stop_reason, usage: response.usage }
+  return callOpenRouter(
+    [{ role: 'system', content: systemPrompt }, { role: 'user', content: userMessage }],
+    maxTokens
+  )
 }
 
 export async function POST(req: Request) {

@@ -1,4 +1,4 @@
-import { anthropic, MODEL } from '@/lib/anthropic'
+import { MODEL } from '@/lib/openrouter'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest } from 'next/server'
 
@@ -53,14 +53,11 @@ export async function POST(req: NextRequest) {
 
     console.log('[bloodwork] parsing PDF for user', user.id, '— size:', buffer.length, 'bytes')
 
-    // Use Claude's native PDF document support via direct API call (beta feature)
-    const apiRes = await fetch('https://api.anthropic.com/v1/messages', {
+    const apiRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': process.env.ANTHROPIC_API_KEY!,
-        'anthropic-version': '2023-06-01',
-        'anthropic-beta': 'pdfs-2024-09-25',
+        Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
       },
       body: JSON.stringify({
         model: MODEL,
@@ -69,11 +66,8 @@ export async function POST(req: NextRequest) {
           {
             role: 'user',
             content: [
-              {
-                type: 'document',
-                source: { type: 'base64', media_type: 'application/pdf', data: base64 },
-              },
               { type: 'text', text: PARSE_PROMPT },
+              { type: 'image_url', image_url: { url: `data:application/pdf;base64,${base64}` } },
             ],
           },
         ],
@@ -82,17 +76,19 @@ export async function POST(req: NextRequest) {
 
     if (!apiRes.ok) {
       const errBody = await apiRes.text()
-      console.error('[bloodwork] Anthropic API error', apiRes.status, errBody.slice(0, 400))
-      return Response.json({ error: 'Failed to parse PDF with Claude' }, { status: 500 })
+      console.error('[bloodwork] OpenRouter API error', apiRes.status, errBody.slice(0, 400))
+      return Response.json({ error: 'Failed to parse PDF' }, { status: 500 })
     }
 
     const apiJson = await apiRes.json()
-    const textContent = apiJson.content?.find((c: { type: string }) => c.type === 'text')
-    if (!textContent || textContent.type !== 'text') {
-      console.error('[bloodwork] Claude returned no text content')
+    const rawResponseText: string | null = apiJson.choices?.[0]?.message?.content ?? null
+    if (!rawResponseText) {
+      console.error('[bloodwork] model returned no text content')
       return Response.json({ error: 'Failed to parse bloodwork PDF' }, { status: 500 })
     }
 
+    // wrap in object so downstream parsing code can reference textContent.text uniformly
+    const textContent = { text: rawResponseText }
     console.log('[bloodwork] raw response preview:', textContent.text.slice(0, 400))
 
     let biomarkers: Array<{

@@ -1,4 +1,4 @@
-import { anthropic, MODEL } from '@/lib/anthropic'
+import { MODEL } from '@/lib/openrouter'
 import { buildOnboardingSystemPrompt } from '@/lib/prompts'
 import { createClient } from '@/lib/supabase/server'
 
@@ -18,9 +18,6 @@ export async function POST(req: Request) {
 
     const systemPrompt = buildOnboardingSystemPrompt(step, stepGoals[step] || '')
 
-    // Anthropic API requires the first message to have role: 'user'.
-    // The frontend initializes state with an assistant greeting, so strip any
-    // leading assistant turns before sending to the API.
     const allMessages = (messages as { role: string; content: string }[]).map((m) => ({
       role: m.role as 'user' | 'assistant',
       content: m.content,
@@ -32,28 +29,62 @@ export async function POST(req: Request) {
       return Response.json({ error: 'No user message to process' }, { status: 400 })
     }
 
-    const stream = anthropic.messages.stream({
-      model: MODEL,
-      max_tokens: 1024,
-      system: systemPrompt,
-      messages: apiMessages,
-    })
-
     const encoder = new TextEncoder()
+    let fullText = ''
+
     const readableStream = new ReadableStream({
       async start(controller) {
         try {
-          for await (const chunk of stream) {
-            if (
-              chunk.type === 'content_block_delta' &&
-              chunk.delta.type === 'text_delta'
-            ) {
-              controller.enqueue(encoder.encode(chunk.delta.text))
+          const orResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: MODEL,
+              max_tokens: 1024,
+              stream: true,
+              messages: [
+                { role: 'system', content: systemPrompt },
+                ...apiMessages,
+              ],
+            }),
+          })
+
+          if (!orResponse.ok || !orResponse.body) {
+            const errText = await orResponse.text().catch(() => '')
+            throw new Error(`OpenRouter error ${orResponse.status}: ${errText}`)
+          }
+
+          const reader = orResponse.body.getReader()
+          const decoder = new TextDecoder()
+          let buffer = ''
+
+          while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
+            buffer += decoder.decode(value, { stream: true })
+
+            const lines = buffer.split('\n')
+            buffer = lines.pop() ?? ''
+
+            for (const line of lines) {
+              if (!line.startsWith('data: ')) continue
+              const data = line.slice(6).trim()
+              if (data === '[DONE]') continue
+              try {
+                const chunk = JSON.parse(data)
+                const delta: string | undefined = chunk.choices?.[0]?.delta?.content
+                if (delta) {
+                  fullText += delta
+                  controller.enqueue(encoder.encode(delta))
+                }
+              } catch { /* skip malformed SSE chunks */ }
             }
           }
 
           // After streaming completes, parse step_complete and persist data
-          const fullText = await stream.finalText()
           const stepCompleteMatch = fullText.match(/<step_complete>([\s\S]*?)<\/step_complete>/)
           if (stepCompleteMatch) {
             try {

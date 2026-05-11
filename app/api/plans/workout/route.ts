@@ -1,4 +1,5 @@
-import { anthropic, MODEL, buildSystemPrompt } from '@/lib/anthropic'
+import { buildSystemPrompt } from '@/lib/anthropic'
+import { callOpenRouter, MODEL } from '@/lib/openrouter'
 import { WORKOUT_PLAN_PROMPT } from '@/lib/prompts'
 import { createClient } from '@/lib/supabase/server'
 import { fetchFullProfile } from '@/lib/profile'
@@ -64,17 +65,14 @@ export async function POST(_req: Request) {
 
     let rawText: string | null = null
 
-    const firstResponse = await anthropic.messages.create({
-      model: MODEL,
-      max_tokens: 8192,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: userMessage }],
-    })
-    const firstBlock = firstResponse.content.find((c) => c.type === 'text')
-    rawText = firstBlock?.type === 'text' ? firstBlock.text : null
+    const firstResponse = await callOpenRouter(
+      [{ role: 'system', content: systemPrompt }, { role: 'user', content: userMessage }],
+      8192
+    )
+    rawText = firstResponse.text
 
     if (!rawText) {
-      console.error('[workout plan] Claude returned no text content')
+      console.error('[workout plan] model returned no text content')
       return Response.json({ error: 'Failed to generate workout plan' }, { status: 500 })
     }
 
@@ -84,24 +82,19 @@ export async function POST(_req: Request) {
       plan = extractJson(rawText) as WorkoutPlan
     } catch (parseErr) {
       console.error('[workout plan] JSON parse failed on first attempt:', parseErr)
-      console.error('[workout plan] raw Claude response (first 2000 chars):', rawText.slice(0, 2000))
+      console.error('[workout plan] raw response (first 2000 chars):', rawText.slice(0, 2000))
 
       console.log('[workout plan] retrying with strict JSON prompt...')
-      const retryResponse = await anthropic.messages.create({
-        model: MODEL,
-        max_tokens: 8192,
-        system: systemPrompt,
-        messages: [
+      const retryResponse = await callOpenRouter(
+        [
+          { role: 'system', content: systemPrompt },
           { role: 'user', content: userMessage },
           { role: 'assistant', content: rawText },
-          {
-            role: 'user',
-            content: 'Return ONLY raw JSON. No markdown, no backticks, no explanation, nothing else. Just the JSON object.',
-          },
+          { role: 'user', content: 'Return ONLY raw JSON. No markdown, no backticks, no explanation, nothing else. Just the JSON object.' },
         ],
-      })
-      const retryBlock = retryResponse.content.find((c) => c.type === 'text')
-      const retryText = retryBlock?.type === 'text' ? retryBlock.text : null
+        8192
+      )
+      const retryText = retryResponse.text
 
       if (!retryText) {
         console.error('[workout plan] retry returned no text')

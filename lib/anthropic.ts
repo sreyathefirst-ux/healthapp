@@ -1,11 +1,4 @@
-import Anthropic from '@anthropic-ai/sdk'
 import { UserProfile } from '@/types'
-
-export const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY!,
-})
-
-export const MODEL = 'claude-opus-4-7'
 
 export function buildSystemPrompt(profile: UserProfile, bloodwork: Array<{
   biomarker_name: string

@@ -1,4 +1,5 @@
-import { anthropic, MODEL, buildSystemPrompt } from '@/lib/anthropic'
+import { buildSystemPrompt } from '@/lib/anthropic'
+import { callOpenRouter, MODEL } from '@/lib/openrouter'
 import { buildWorkoutSwapPrompt } from '@/lib/prompts'
 import { createClient } from '@/lib/supabase/server'
 import { fetchFullProfile } from '@/lib/profile'
@@ -23,21 +24,18 @@ export async function POST(req: Request) {
     const systemPrompt = buildSystemPrompt(profile, bloodwork || [])
     const swapPrompt = buildWorkoutSwapPrompt(workout, day)
 
-    const response = await anthropic.messages.create({
-      model: MODEL,
-      max_tokens: 4096,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: swapPrompt }],
-    })
+    const { text: swapText } = await callOpenRouter(
+      [{ role: 'system', content: systemPrompt }, { role: 'user', content: swapPrompt }],
+      4096
+    )
 
-    const textContent = response.content.find((c) => c.type === 'text')
-    if (!textContent || textContent.type !== 'text') {
+    if (!swapText) {
       return Response.json({ error: 'Failed to generate alternatives' }, { status: 500 })
     }
 
     let alternatives: WorkoutDay[]
     try {
-      const jsonMatch = textContent.text.match(/\[[\s\S]*\]/)
+      const jsonMatch = swapText.match(/\[[\s\S]*\]/)
       if (!jsonMatch) throw new Error('No JSON array found')
       alternatives = JSON.parse(jsonMatch[0])
     } catch {

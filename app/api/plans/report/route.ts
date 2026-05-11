@@ -1,4 +1,5 @@
-import { anthropic, MODEL, buildSystemPrompt } from '@/lib/anthropic'
+import { buildSystemPrompt } from '@/lib/anthropic'
+import { callOpenRouter, MODEL } from '@/lib/openrouter'
 import { buildHealthReportPrompt } from '@/lib/prompts'
 import { createClient } from '@/lib/supabase/server'
 import { fetchFullProfile } from '@/lib/profile'
@@ -35,15 +36,12 @@ export async function POST(_req: Request) {
     const reportPrompt = buildHealthReportPrompt(profile, bw)
     const weekStart = getWeekStartDate()
 
-    const response = await anthropic.messages.create({
-      model: MODEL,
-      max_tokens: 8192,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: reportPrompt }],
-    })
+    const { text: reportText } = await callOpenRouter(
+      [{ role: 'system', content: systemPrompt }, { role: 'user', content: reportPrompt }],
+      8192
+    )
 
-    const textContent = response.content.find((c) => c.type === 'text')
-    if (!textContent || textContent.type !== 'text') {
+    if (!reportText) {
       return Response.json({ error: 'Failed to generate health report' }, { status: 500 })
     }
 
@@ -51,7 +49,7 @@ export async function POST(_req: Request) {
       {
         user_id: user.id,
         week_start_date: weekStart,
-        health_report: textContent.text,
+        health_report: reportText,
         generated_at: new Date().toISOString(),
       },
       { onConflict: 'user_id,week_start_date' }
@@ -62,9 +60,9 @@ export async function POST(_req: Request) {
       return Response.json({ error: saveError.message }, { status: 500 })
     }
 
-    console.log('[report] saved for week', weekStart, '— chars:', textContent.text.length)
+    console.log('[report] saved for week', weekStart, '— chars:', reportText.length)
 
-    return Response.json({ success: true, report: textContent.text })
+    return Response.json({ success: true, report: reportText })
   } catch (error) {
     console.error('[report] unhandled error:', error)
     return Response.json({ error: 'Internal server error' }, { status: 500 })
