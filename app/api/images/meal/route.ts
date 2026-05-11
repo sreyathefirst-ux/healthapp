@@ -7,9 +7,14 @@ export async function POST(req: Request) {
   try {
     const { mealId, mealName, imagePrompt } = await req.json()
 
+    console.log('[images/meal] POST — mealId:', mealId, '| FAL_KEY present:', !!process.env.FAL_KEY)
+
     const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+    const { data: { user }, error: authErr } = await supabase.auth.getUser()
+    if (!user) {
+      console.error('[images/meal] 401 Unauthorized — no user session (likely called server-side without cookies). authErr:', authErr?.message)
+      return Response.json({ error: 'Unauthorized' }, { status: 401 })
+    }
 
     // Generate image via fal.ai
     const result = await fal.run('fal-ai/flux/schnell', {

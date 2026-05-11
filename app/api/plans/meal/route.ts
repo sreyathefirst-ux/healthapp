@@ -198,27 +198,9 @@ export async function POST(req: Request) {
 
     console.log('[meal plan] saved OK — row:', JSON.stringify(savedRow))
 
-    triggerMealImageGeneration(plan, user.id).catch(console.error)
-
     return Response.json({ success: true, plan })
   } catch (error) {
     console.error('[meal plan] unhandled error:', error)
     return Response.json({ error: 'Internal server error' }, { status: 500 })
-  }
-}
-
-async function triggerMealImageGeneration(plan: MealPlan, _userId: string) {
-  const days = Object.values(plan.days)
-  for (const day of days) {
-    const meals = [day.breakfast, day.lunch, day.dinner, day.snack]
-    for (const meal of meals) {
-      if (meal && meal.id && meal.image_prompt) {
-        fetch('/api/images/meal', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ mealId: meal.id, mealName: meal.name, imagePrompt: meal.image_prompt }),
-        }).catch(() => {})
-      }
-    }
   }
 }

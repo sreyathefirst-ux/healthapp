@@ -190,13 +190,7 @@ export default function MealPlanPage() {
         .eq('user_id', user.id)
         .eq('week_start_date', weekStart)
 
-      if (newMeal.image_prompt) {
-        fetch('/api/images/meal', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ mealId: newMeal.id, mealName: newMeal.name, imagePrompt: newMeal.image_prompt }),
-        }).catch(() => {})
-      }
+      // Image generation disabled — MealCard shows emoji placeholder when image_url is null
     } catch {
       toast('Failed to save swap', 'error')
     }
