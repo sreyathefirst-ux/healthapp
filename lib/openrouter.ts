@@ -1,33 +1,57 @@
-export const MODEL = 'google/gemini-2.5-flash'
+export const MODEL = 'gemini-2.5-flash'
 
-const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions'
+const GOOGLE_AI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}`
 
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant'
   content: string
 }
 
+function toGeminiMessages(messages: ChatMessage[]) {
+  const systemMsg = messages.find((m) => m.role === 'system')
+  const chatMessages = messages.filter((m) => m.role !== 'system')
+
+  const contents = chatMessages.map((m) => ({
+    role: m.role === 'assistant' ? 'model' : 'user',
+    parts: [{ text: m.content }],
+  }))
+
+  const body: Record<string, unknown> = { contents }
+  if (systemMsg) {
+    body.systemInstruction = { parts: [{ text: systemMsg.content }] }
+  }
+  return body
+}
+
 export async function callOpenRouter(
   messages: ChatMessage[],
   maxTokens: number
 ): Promise<{ text: string | null; stopReason: string | null; usage: unknown }> {
-  const response = await fetch(OPENROUTER_URL, {
+  const key = process.env.GOOGLE_AI_KEY
+  const body = { ...toGeminiMessages(messages), generationConfig: { maxOutputTokens: maxTokens } }
+
+  const response = await fetch(`${GOOGLE_AI_URL}:generateContent?key=${key}`, {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ model: MODEL, max_tokens: maxTokens, messages }),
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
   })
 
   if (!response.ok) {
     const err = await response.text().catch(() => '')
-    throw new Error(`OpenRouter error ${response.status}: ${err}`)
+    throw new Error(`Google AI error ${response.status}: ${err}`)
   }
 
   const data = await response.json()
-  const text: string | null = data.choices?.[0]?.message?.content ?? null
-  const stopReason: string | null = data.choices?.[0]?.finish_reason ?? null
-  const usage = data.usage ?? null
-  return { text, stopReason, usage }
+  const text: string | null = data.candidates?.[0]?.content?.parts?.[0]?.text ?? null
+  const stopReason: string | null = data.candidates?.[0]?.finishReason ?? null
+  return { text, stopReason, usage: null }
+}
+
+export function buildGeminiStreamRequest(messages: ChatMessage[], maxTokens: number) {
+  const key = process.env.GOOGLE_AI_KEY
+  const body = { ...toGeminiMessages(messages), generationConfig: { maxOutputTokens: maxTokens } }
+  return {
+    url: `${GOOGLE_AI_URL}:streamGenerateContent?alt=sse&key=${key}`,
+    body: JSON.stringify(body),
+  }
 }

@@ -1,4 +1,4 @@
-import { MODEL } from '@/lib/openrouter'
+import { MODEL, buildGeminiStreamRequest } from '@/lib/openrouter'
 import { buildOnboardingSystemPrompt } from '@/lib/prompts'
 import { createClient } from '@/lib/supabase/server'
 
@@ -35,29 +35,22 @@ export async function POST(req: Request) {
     const readableStream = new ReadableStream({
       async start(controller) {
         try {
-          const orResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          const { url, body: reqBody } = buildGeminiStreamRequest(
+            [{ role: 'system', content: systemPrompt }, ...apiMessages],
+            1024
+          )
+          const geminiResponse = await fetch(url, {
             method: 'POST',
-            headers: {
-              Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              model: MODEL,
-              max_tokens: 1024,
-              stream: true,
-              messages: [
-                { role: 'system', content: systemPrompt },
-                ...apiMessages,
-              ],
-            }),
+            headers: { 'Content-Type': 'application/json' },
+            body: reqBody,
           })
 
-          if (!orResponse.ok || !orResponse.body) {
-            const errText = await orResponse.text().catch(() => '')
-            throw new Error(`OpenRouter error ${orResponse.status}: ${errText}`)
+          if (!geminiResponse.ok || !geminiResponse.body) {
+            const errText = await geminiResponse.text().catch(() => '')
+            throw new Error(`Google AI error ${geminiResponse.status}: ${errText}`)
           }
 
-          const reader = orResponse.body.getReader()
+          const reader = geminiResponse.body.getReader()
           const decoder = new TextDecoder()
           let buffer = ''
 
@@ -72,10 +65,10 @@ export async function POST(req: Request) {
             for (const line of lines) {
               if (!line.startsWith('data: ')) continue
               const data = line.slice(6).trim()
-              if (data === '[DONE]') continue
+              if (!data) continue
               try {
                 const chunk = JSON.parse(data)
-                const delta: string | undefined = chunk.choices?.[0]?.delta?.content
+                const delta: string | undefined = chunk.candidates?.[0]?.content?.parts?.[0]?.text
                 if (delta) {
                   fullText += delta
                   controller.enqueue(encoder.encode(delta))
