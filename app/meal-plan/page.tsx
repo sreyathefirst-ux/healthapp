@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { AppShell } from '@/components/layout/AppShell'
 import { MealCard } from '@/components/meal-plan/MealCard'
 import { SwapModal } from '@/components/meal-plan/SwapModal'
@@ -51,6 +51,59 @@ export default function MealPlanPage() {
   const [swapModal, setSwapModal] = useState<{ meal: Meal; mealType: string; day: string } | null>(null)
   const [recipeModal, setRecipeModal] = useState<{ meal: Meal; mealType: string } | null>(null)
   const [mealLog, setMealLog] = useState<Record<string, MealLogStatus>>({})
+  // Track which days have already had image generation triggered to avoid double-requests
+  const imageGenTriggered = useRef<Set<string>>(new Set())
+
+  const generateImagesForDay = useCallback(async (currentPlan: MealPlan, day: string, ws: string) => {
+    const cacheKey = `${ws}_${day}`
+    if (imageGenTriggered.current.has(cacheKey)) return
+    imageGenTriggered.current.add(cacheKey)
+
+    const dayMealsData = currentPlan.days?.[day as keyof typeof currentPlan.days] as DayMeals | undefined
+    if (!dayMealsData) return
+
+    const mealsNeedingImages = (['breakfast', 'lunch', 'dinner', 'snack'] as const)
+      .map((mt) => ({ meal: dayMealsData[mt], mealType: mt }))
+      .filter(({ meal }) => meal && !meal.image_url)
+
+    if (mealsNeedingImages.length === 0) return
+    console.log('[meal-plan] generating images for', mealsNeedingImages.length, 'meals on', day)
+
+    await Promise.allSettled(
+      mealsNeedingImages.map(async ({ meal }) => {
+        try {
+          const res = await fetch('/api/images/meal', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              mealId: meal!.id,
+              mealName: meal!.name,
+              imagePrompt: meal!.image_prompt,
+              weekStartDate: ws,
+            }),
+          })
+          const data = await res.json()
+          if (data.image_url) {
+            setPlan((prev) => {
+              if (!prev) return prev
+              const updatedDay = { ...(prev.days[day as keyof typeof prev.days] as DayMeals) }
+              for (const mt of ['breakfast', 'lunch', 'dinner', 'snack'] as const) {
+                if (updatedDay[mt]?.id === meal!.id) {
+                  updatedDay[mt] = { ...updatedDay[mt]!, image_url: data.image_url }
+                }
+              }
+              return { ...prev, days: { ...prev.days, [day]: updatedDay } }
+            })
+            console.log('[meal-plan] image loaded for:', meal!.name)
+          } else {
+            console.warn('[meal-plan] no image_url returned for:', meal!.name, '—', data.error)
+          }
+        } catch (e) {
+          console.error('[meal-plan] image gen fetch failed for', meal!.name, ':', e)
+        }
+      })
+    )
+  }, [])
 
   useEffect(() => {
     const today = new Date().getDay()
@@ -58,6 +111,14 @@ export default function MealPlanPage() {
     const todayName = days[today] as typeof DAYS[number]
     if (DAYS.includes(todayName)) setSelectedDay(todayName)
   }, [])
+
+  // Trigger image gen when user switches days (plan is already loaded)
+  useEffect(() => {
+    if (plan && weekOffset === 0) {
+      generateImagesForDay(plan, selectedDay, getWeekStartDate(0))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDay])
 
   useEffect(() => {
     async function fetchPlan() {
@@ -99,6 +160,11 @@ export default function MealPlanPage() {
         }
         setPlan(normalizedPlan)
 
+        // Trigger background image generation for the currently selected day
+        if (normalizedPlan) {
+          generateImagesForDay(normalizedPlan, selectedDay, weekStart)
+        }
+
         const today = new Date().toISOString().split('T')[0]
         const { data: log } = await supabase
           .from('daily_logs')
@@ -133,6 +199,9 @@ export default function MealPlanPage() {
           toast('Plan generated but structure was invalid. Please try again.', 'error')
         } else {
           toast('Meal plan generated! 🥗', 'success')
+          // Clear image gen tracking so fresh images are generated for new plan
+          imageGenTriggered.current = new Set()
+          generateImagesForDay(normalized, selectedDay, getWeekStartDate(weekOffset))
         }
       } else {
         toast(data.error || 'Failed to generate plan', 'error')
@@ -191,7 +260,10 @@ export default function MealPlanPage() {
         .eq('user_id', user.id)
         .eq('week_start_date', weekStart)
 
-      // Image generation disabled — MealCard shows emoji placeholder when image_url is null
+      // Trigger image generation for the swapped meal
+      const ws = getWeekStartDate(weekOffset)
+      imageGenTriggered.current.delete(`${ws}_${swapModal.day}`)
+      generateImagesForDay(updatedPlan, swapModal.day, ws)
     } catch {
       toast('Failed to save swap', 'error')
     }
