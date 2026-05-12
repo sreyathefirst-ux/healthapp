@@ -258,27 +258,25 @@ A warm, personal closing paragraph addressed to the patient by name. Acknowledge
 }
 
 export function buildMealSwapPrompt(currentMeal: Record<string, unknown>, mealType: string, feedback?: string): string {
-  const feedbackBlock = feedback
-    ? `\n\nUSER FEEDBACK (address this above everything else): "${feedback}"\n`
-    : ''
+  const name = currentMeal.name as string || 'unknown'
+  const calories = currentMeal.calories as number || 0
+  const protein = currentMeal.protein_g as number || 0
+  const carbs = currentMeal.carbs_g as number || 0
+  const fat = currentMeal.fat_g as number || 0
 
-  return `The user wants to swap their ${mealType}. Current meal:
-${JSON.stringify(currentMeal, null, 2)}${feedbackBlock}
+  const feedbackLine = feedback
+    ? `USER FEEDBACK — prioritise this above all else: "${feedback}"`
+    : 'Offer real variety from the original'
 
-Generate 3 alternative ${mealType} meals that:
-1. Match calorie/macro targets within 15% of the original
-2. STRICTLY respect all user allergies and dietary restrictions
-3. Are genuinely delicious and restaurant-quality — bold flavors, interesting textures
-4. Draw from the user's loved cuisines and taste profile
-5. Are appropriate for ${mealType} time
-${feedback ? `6. DIRECTLY address: "${feedback}"` : '6. Offer real variety from the original'}
+  return `Swap this ${mealType}: "${name}" (~${calories} cal, ${protein}g protein, ${carbs}g carbs, ${fat}g fat)
+${feedbackLine}
 
-Return ONLY a valid JSON array of exactly 3 meal objects — no markdown, no backticks:
-[
-  { "id": "uuid", "name": "...", "description": "appetizing menu-style description", "reasoning": "specific health reason", "calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0, "fiber_g": 0, "ingredients": ["1 cup ...", "2 tbsp ..."], "image_url": null, "image_prompt": "A hand-drawn watercolor illustration of [meal name], fine liner pen, Great British Baking Show recipe card style" },
-  { "id": "uuid", "name": "...", "description": "...", "reasoning": "...", "calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0, "fiber_g": 0, "ingredients": ["..."], "image_url": null, "image_prompt": "..." },
-  { "id": "uuid", "name": "...", "description": "...", "reasoning": "...", "calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0, "fiber_g": 0, "ingredients": ["..."], "image_url": null, "image_prompt": "..." }
-]`
+Rules: match macros within 15%, respect all user allergies/restrictions, delicious and restaurant-quality, appropriate for ${mealType}.
+
+YOUR ENTIRE RESPONSE MUST BE ONLY THE JSON ARRAY BELOW.
+Start with [ and end with ]. No markdown. No backticks. No explanation. No text before or after.
+
+[{"id":"uuid4","name":"Meal Name","description":"appetizing 1-sentence description","reasoning":"specific health/nutrition reason","calories":450,"protein_g":32,"carbs_g":40,"fat_g":14,"fiber_g":6,"ingredients":["1 cup item","2 tbsp item"],"image_url":null,"image_prompt":"watercolor illustration of Meal Name, Great British Baking Show style"},{"id":"uuid4","name":"...","description":"...","reasoning":"...","calories":0,"protein_g":0,"carbs_g":0,"fat_g":0,"fiber_g":0,"ingredients":["..."],"image_url":null,"image_prompt":"..."},{"id":"uuid4","name":"...","description":"...","reasoning":"...","calories":0,"protein_g":0,"carbs_g":0,"fat_g":0,"fiber_g":0,"ingredients":["..."],"image_url":null,"image_prompt":"..."}]`
 }
 
 export function buildWorkoutSwapPrompt(currentWorkout: Record<string, unknown>, day: string): string {
