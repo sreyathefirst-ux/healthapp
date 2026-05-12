@@ -134,47 +134,66 @@ export function OnboardingChat() {
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
-    // Reset input so same file can be re-uploaded if needed
-    e.target.value = ''
+    e.target.value = '' // allow re-selecting same file
 
     setUploadingFile(true)
     setMessages((prev) => [
       ...prev,
       { role: 'user', content: `Uploading: ${file.name}` },
+      { role: 'assistant', content: 'Processing your bloodwork PDF...' },
     ])
+
+    console.log('[OnboardingChat] uploading file:', file.name, '| size:', file.size, '| type:', file.type)
 
     const formData = new FormData()
     formData.append('file', file)
 
     try {
       const res = await fetch('/api/bloodwork/parse', { method: 'POST', body: formData })
-      const data = await res.json()
+      let data: { success?: boolean; biomarkers?: Array<{ biomarker_name: string; value: number; unit: string }>; error?: string }
+      try {
+        data = await res.json()
+      } catch (jsonErr) {
+        console.error('[OnboardingChat] failed to parse bloodwork response as JSON:', jsonErr, '| status:', res.status)
+        throw new Error(`HTTP ${res.status}: response was not JSON`)
+      }
+
+      console.log('[OnboardingChat] bloodwork parse response — status:', res.status, '| success:', data.success, '| biomarkers:', data.biomarkers?.length ?? 0, '| error:', data.error)
 
       if (data.success && data.biomarkers && data.biomarkers.length > 0) {
         const shown = data.biomarkers.slice(0, 6)
         const markerList = shown
-          .map((b: { biomarker_name: string; value: number; unit: string }) => `• ${b.biomarker_name}: ${b.value} ${b.unit}`)
+          .map((b) => `• ${b.biomarker_name}: ${b.value} ${b.unit}`)
           .join('\n')
         const extra = data.biomarkers.length > 6 ? `\n...and ${data.biomarkers.length - 6} more` : ''
-        const msg = `Got it! I found these markers in your bloodwork:\n${markerList}${extra}\n\nThis will help me tailor your plan. Let's move on!`
-        setMessages((prev) => [...prev, { role: 'assistant', content: msg }])
+        const msg = `Got it! I found these markers:\n${markerList}${extra}\n\nThis will help me tailor your plan perfectly. Let's move on!`
+        setMessages((prev) => {
+          const updated = [...prev]
+          updated[updated.length - 1] = { role: 'assistant', content: msg }
+          return updated
+        })
         setTimeout(() => setCurrentStep(3), 1500)
       } else {
-        const errMsg = data.error || 'No biomarkers found'
-        console.error('[OnboardingChat] bloodwork parse returned no data:', errMsg)
-        setMessages((prev) => [
-          ...prev,
-          { role: 'assistant', content: "I couldn't read that PDF. Can you try uploading again?" },
-        ])
-        // Stay on step 2 so user can retry
+        console.error('[OnboardingChat] bloodwork parse failed:', data.error || 'no biomarkers returned')
+        setMessages((prev) => {
+          const updated = [...prev]
+          updated[updated.length - 1] = {
+            role: 'assistant',
+            content: "I couldn't read that PDF. Can you try uploading again?",
+          }
+          return updated
+        })
       }
     } catch (err) {
-      console.error('[OnboardingChat] bloodwork upload fetch error:', err)
-      setMessages((prev) => [
-        ...prev,
-        { role: 'assistant', content: "I couldn't read that PDF. Can you try uploading again?" },
-      ])
-      // Stay on step 2 so user can retry
+      console.error('[OnboardingChat] bloodwork upload error:', err)
+      setMessages((prev) => {
+        const updated = [...prev]
+        updated[updated.length - 1] = {
+          role: 'assistant',
+          content: "I couldn't read that PDF. Can you try uploading again?",
+        }
+        return updated
+      })
     } finally {
       setUploadingFile(false)
     }

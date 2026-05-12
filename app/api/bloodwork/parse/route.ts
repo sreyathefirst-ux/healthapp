@@ -3,145 +3,163 @@ import { NextRequest } from 'next/server'
 
 const GOOGLE_AI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash'
 
-const PARSE_PROMPT = `Extract all biomarker values from this medical lab report PDF. Return ONLY valid JSON with no markdown, no backticks, nothing else:
-[
-  {
-    "biomarker_name": "LDL Cholesterol",
-    "value": 112,
-    "unit": "mg/dL",
-    "reference_range_low": 0,
-    "reference_range_high": 99
-  }
-]
-
-Rules:
-- Extract the ACTUAL measured value — never invent or estimate
-- biomarker_name: use the exact name printed in the report (or a clean common version)
-- value: must be a number (convert "<0.01" to 0.01, ">180" to 180)
-- unit: exactly as shown (mg/dL, mmol/L, ng/mL, U/L, %, g/dL, etc.)
-- reference_range_low / reference_range_high: use the ranges printed for THIS patient; use null if not shown
-- Include every test result on every page
-- Do NOT include qualitative results (e.g. "Negative", "Normal") that have no numeric value
-- Return ONLY the JSON array, nothing else`
+const PARSE_PROMPT = `Extract ALL biomarker values from this medical lab report. For each value found, return ONLY this JSON format with no markdown, no backticks, no explanation:
+[{"biomarker_name": "name", "value": NUMBER, "unit": "unit", "reference_range_low": NUMBER, "reference_range_high": NUMBER}, ...]`
 
 export async function POST(req: NextRequest) {
   try {
+    // ── 1. Read file from form data ───────────────────────────────────────────
     const formData = await req.formData()
-    const file = formData.get('file') as File
+    const file = formData.get('file') as File | null
 
     if (!file) {
-      console.error('[bloodwork] no file in request')
+      console.error('[bloodwork] step 1 FAIL — no file in form data')
       return Response.json({ error: 'No file provided' }, { status: 400 })
     }
+    console.log('[bloodwork] step 1 OK — file name:', file.name, '| size:', file.size, 'bytes | type:', file.type)
 
+    // ── 2. Auth ───────────────────────────────────────────────────────────────
     const supabase = createClient()
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
     if (!user) {
-      console.error('[bloodwork] auth failed:', authErr?.message)
+      console.error('[bloodwork] step 2 FAIL — auth error:', authErr?.message)
       return Response.json({ error: 'Unauthorized' }, { status: 401 })
     }
+    console.log('[bloodwork] step 2 OK — user:', user.id)
 
-    const arrayBuffer = await file.arrayBuffer()
-    const buffer = Buffer.from(arrayBuffer)
-    const base64 = buffer.toString('base64')
+    // ── 3. Convert to base64 ──────────────────────────────────────────────────
+    let base64: string
+    try {
+      const arrayBuffer = await file.arrayBuffer()
+      base64 = Buffer.from(arrayBuffer).toString('base64')
+      console.log('[bloodwork] step 3 OK — base64 length:', base64.length)
+    } catch (e) {
+      console.error('[bloodwork] step 3 FAIL — buffer conversion error:', e)
+      return Response.json({ error: 'Failed to read file' }, { status: 500 })
+    }
 
-    console.log('[bloodwork] parsing PDF for user', user.id, '— size:', buffer.length, 'bytes | GOOGLE_AI_KEY present:', !!process.env.GOOGLE_AI_KEY)
+    // Upload to storage (fire-and-forget)
+    supabase.storage
+      .from('bloodwork-pdfs')
+      .upload(`${user.id}/${Date.now()}.pdf`, Buffer.from(base64, 'base64'), {
+        contentType: 'application/pdf',
+        upsert: true,
+      })
+      .catch((e) => console.warn('[bloodwork] storage upload non-fatal:', e?.message))
 
-    // Upload original PDF to storage (non-blocking, ignore errors)
-    supabase.storage.from('bloodwork-pdfs').upload(`${user.id}/${Date.now()}.pdf`, buffer, {
-      contentType: 'application/pdf',
-      upsert: true,
-    }).catch((e) => console.warn('[bloodwork] storage upload failed (non-fatal):', e?.message))
-
-    // Call Google Generative Language API with inline PDF data
+    // ── 4. Call Google AI ─────────────────────────────────────────────────────
     const key = process.env.GOOGLE_AI_KEY
+    if (!key) {
+      console.error('[bloodwork] step 4 FAIL — GOOGLE_AI_KEY not set')
+      return Response.json({ error: 'AI service not configured' }, { status: 500 })
+    }
+
     const reqBody = {
       contents: [{
         role: 'user',
         parts: [
-          {
-            inlineData: {
-              mimeType: 'application/pdf',
-              data: base64,
-            },
-          },
+          { inlineData: { mimeType: 'application/pdf', data: base64 } },
           { text: PARSE_PROMPT },
         ],
       }],
-      generationConfig: { maxOutputTokens: 4096 },
+      generationConfig: { maxOutputTokens: 8192 },
     }
 
-    console.log('[bloodwork] calling Google AI generateContent...')
-    const apiRes = await fetch(`${GOOGLE_AI_URL}:generateContent?key=${key}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(reqBody),
-    })
+    console.log('[bloodwork] step 4 — calling Google AI...')
+    let apiRes: Response
+    try {
+      apiRes = await fetch(`${GOOGLE_AI_URL}:generateContent?key=${key}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(reqBody),
+      })
+    } catch (fetchErr) {
+      console.error('[bloodwork] step 4 FAIL — network error:', fetchErr)
+      return Response.json({ error: 'Failed to reach AI service' }, { status: 500 })
+    }
 
-    console.log('[bloodwork] Google AI response status:', apiRes.status)
-
+    console.log('[bloodwork] step 4 — Google AI status:', apiRes.status)
     if (!apiRes.ok) {
       const errBody = await apiRes.text()
-      console.error('[bloodwork] Google AI error', apiRes.status, ':', errBody.slice(0, 500))
-      return Response.json({ error: 'Failed to parse PDF — AI service error' }, { status: 500 })
+      console.error('[bloodwork] step 4 FAIL — Google AI error body:', errBody.slice(0, 600))
+      return Response.json({ error: `AI service error ${apiRes.status}` }, { status: 500 })
     }
 
-    const apiJson = await apiRes.json()
-    const rawResponseText: string | null = apiJson.candidates?.[0]?.content?.parts?.[0]?.text ?? null
+    // ── 5. Extract text from response ─────────────────────────────────────────
+    let apiJson: Record<string, unknown>
+    try {
+      apiJson = await apiRes.json()
+    } catch (e) {
+      console.error('[bloodwork] step 5 FAIL — JSON parse of API response:', e)
+      return Response.json({ error: 'Malformed AI response' }, { status: 500 })
+    }
 
-    console.log('[bloodwork] raw response length:', rawResponseText?.length ?? 0)
-    console.log('[bloodwork] raw response preview:', rawResponseText?.slice(0, 400))
+    // Gemini 2.5 Flash generates thinking tokens first (thought: true parts).
+    // Find the first part that is actual text output (not a thought block).
+    const parts = (apiJson as {
+      candidates?: Array<{ content?: { parts?: Array<{ text?: string; thought?: boolean }> } }>
+    }).candidates?.[0]?.content?.parts ?? []
+
+    console.log('[bloodwork] step 5 — parts count:', parts.length,
+      '| types:', parts.map((p) => p.thought ? 'thought' : (p.text ? 'text' : 'empty')))
+
+    const textPart = parts.find((p) => p.text && !p.thought)
+    const rawResponseText = textPart?.text ?? null
 
     if (!rawResponseText) {
-      console.error('[bloodwork] model returned no text. Full response:', JSON.stringify(apiJson).slice(0, 500))
-      return Response.json({ error: 'Failed to parse bloodwork PDF — no text returned' }, { status: 500 })
+      console.error('[bloodwork] step 5 FAIL — no text part found. Full response:', JSON.stringify(apiJson).slice(0, 800))
+      return Response.json({ error: 'AI returned no readable text' }, { status: 500 })
     }
+    console.log('[bloodwork] step 5 OK — raw text length:', rawResponseText.length)
+    console.log('[bloodwork] step 5 — raw preview:', rawResponseText.slice(0, 400))
 
-    let biomarkers: Array<{
+    // ── 6. Parse JSON biomarkers ──────────────────────────────────────────────
+    type RawBiomarker = {
       biomarker_name: string
       value: number
       unit: string
       reference_range_low: number | null
       reference_range_high: number | null
-    }> = []
+    }
+    let biomarkers: RawBiomarker[] = []
 
     try {
       const text = rawResponseText.trim()
-      console.log('[bloodwork] attempting direct JSON parse...')
+
+      // Attempt 1: direct parse
       try {
         biomarkers = JSON.parse(text)
-        console.log('[bloodwork] direct JSON parse succeeded')
-      } catch (e1) {
-        console.warn('[bloodwork] direct parse failed:', (e1 as Error).message, '— trying strip markdown...')
-        const stripped = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim()
+        console.log('[bloodwork] step 6 — direct JSON parse succeeded')
+      } catch {
+        // Attempt 2: strip markdown fences
+        const stripped = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim()
         try {
           biomarkers = JSON.parse(stripped)
-          console.log('[bloodwork] stripped markdown parse succeeded')
-        } catch (e2) {
-          console.warn('[bloodwork] stripped parse failed:', (e2 as Error).message, '— trying bracket match...')
+          console.log('[bloodwork] step 6 — stripped-fence JSON parse succeeded')
+        } catch {
+          // Attempt 3: extract first JSON array
           const match = text.match(/\[[\s\S]*\]/)
           if (match) {
             biomarkers = JSON.parse(match[0])
-            console.log('[bloodwork] bracket match parse succeeded')
+            console.log('[bloodwork] step 6 — bracket-match JSON parse succeeded')
           } else {
             throw new Error('No JSON array found in response')
           }
         }
       }
     } catch (e) {
-      console.error('[bloodwork] all JSON parse attempts failed:', (e as Error).message)
-      console.error('[bloodwork] raw text that failed (first 1000):', rawResponseText.slice(0, 1000))
+      console.error('[bloodwork] step 6 FAIL — all parse attempts failed:', (e as Error).message)
+      console.error('[bloodwork] step 6 — raw text (first 1200):', rawResponseText.slice(0, 1200))
       return Response.json({ error: 'Failed to extract biomarkers from PDF' }, { status: 500 })
     }
 
     if (!Array.isArray(biomarkers) || biomarkers.length === 0) {
-      console.error('[bloodwork] empty or non-array result. Type:', typeof biomarkers, '| raw:', rawResponseText.slice(0, 500))
+      console.error('[bloodwork] step 6 FAIL — result is empty or not an array. Type:', typeof biomarkers)
       return Response.json({ error: 'No biomarkers found in this PDF' }, { status: 422 })
     }
+    console.log('[bloodwork] step 6 OK — extracted', biomarkers.length, 'biomarkers')
 
-    console.log('[bloodwork] extracted', biomarkers.length, 'biomarkers')
-
-    // Replace old bloodwork for this user
+    // ── 7. Save to Supabase ───────────────────────────────────────────────────
     await supabase.from('bloodwork').delete().eq('user_id', user.id)
 
     const rows = biomarkers
@@ -154,7 +172,6 @@ export async function POST(req: NextRequest) {
           low !== null && low !== undefined &&
           high !== null && high !== undefined &&
           (b.value < low || b.value > high)
-
         return {
           user_id: user.id,
           biomarker_name: b.biomarker_name,
@@ -169,12 +186,12 @@ export async function POST(req: NextRequest) {
 
     const { error: insertError } = await supabase.from('bloodwork').insert(rows)
     if (insertError) {
-      console.error('[bloodwork] insert error:', insertError.message, '| details:', insertError.details)
+      console.error('[bloodwork] step 7 FAIL — insert error:', insertError.message, '| details:', insertError.details)
       return Response.json({ error: insertError.message }, { status: 500 })
     }
 
     const flaggedCount = rows.filter((r) => r.is_flagged).length
-    console.log('[bloodwork] saved', rows.length, 'rows,', flaggedCount, 'flagged')
+    console.log('[bloodwork] step 7 OK — saved', rows.length, 'rows,', flaggedCount, 'flagged')
 
     return Response.json({ success: true, biomarkers: rows })
   } catch (error) {
