@@ -25,6 +25,7 @@ export function SwapModal({ meal, mealType, day, onClose, onConfirm }: SwapModal
   const [feedbackText, setFeedbackText] = useState('')
   const [round, setRound] = useState(0) // 0 = first fetch, 1 = after first feedback
   const [error, setError] = useState(false)
+  const [errorDetail, setErrorDetail] = useState<string | null>(null)
 
   useEffect(() => {
     fetchAlternatives()
@@ -35,6 +36,7 @@ export function SwapModal({ meal, mealType, day, onClose, onConfirm }: SwapModal
     setPhase('loading')
     setSelected(null)
     setError(false)
+    setErrorDetail(null)
     try {
       const res = await fetch('/api/meals/swap', {
         method: 'POST',
@@ -46,11 +48,15 @@ export function SwapModal({ meal, mealType, day, onClose, onConfirm }: SwapModal
         setAlternatives(data.alternatives)
         setPhase('pick')
       } else {
+        console.error('[SwapModal] API error:', data.error, '| details:', data.details, '| raw:', data.rawResponse?.slice(0, 200))
         setError(true)
+        setErrorDetail(data.error || 'Unknown error')
         setPhase('pick')
       }
-    } catch {
+    } catch (e) {
+      console.error('[SwapModal] fetch threw:', e)
       setError(true)
+      setErrorDetail((e as Error).message)
       setPhase('pick')
     }
   }
@@ -120,9 +126,12 @@ export function SwapModal({ meal, mealType, day, onClose, onConfirm }: SwapModal
             {phase === 'pick' && (
               <motion.div key="pick" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-3">
                 {error ? (
-                  <div className="text-center py-6">
-                    <p className="text-text-secondary text-sm">Couldn't load alternatives. Please try again.</p>
-                    <Button variant="secondary" size="sm" className="mt-3" onClick={() => fetchAlternatives()}>Retry</Button>
+                  <div className="text-center py-6 space-y-3">
+                    <p className="text-text-secondary text-sm">Couldn't load alternatives.</p>
+                    {errorDetail && (
+                      <p className="text-xs text-red-500 bg-red-50 rounded-lg px-3 py-2 text-left font-mono">{errorDetail}</p>
+                    )}
+                    <Button variant="secondary" size="sm" onClick={() => fetchAlternatives()}>Retry</Button>
                   </div>
                 ) : (
                   <>

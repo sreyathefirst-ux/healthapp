@@ -42,7 +42,11 @@ export async function callOpenRouter(
   }
 
   const data = await response.json()
-  const text: string | null = data.candidates?.[0]?.content?.parts?.[0]?.text ?? null
+  // Gemini 2.5 Flash may return thinking tokens (thought: true) before the actual text part.
+  // Find the first non-thought part that has text.
+  const parts = data.candidates?.[0]?.content?.parts as Array<{ text?: string; thought?: boolean }> | undefined
+  const textPart = parts?.find((p) => p.text && !p.thought)
+  const text: string | null = textPart?.text ?? null
   const stopReason: string | null = data.candidates?.[0]?.finishReason ?? null
   return { text, stopReason, usage: null }
 }
