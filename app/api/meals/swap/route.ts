@@ -1,4 +1,3 @@
-import { buildSystemPrompt } from '@/lib/anthropic'
 import { callOpenRouter } from '@/lib/openrouter'
 import { buildMealSwapPrompt } from '@/lib/prompts'
 import { createClient } from '@/lib/supabase/server'
@@ -98,22 +97,30 @@ export async function POST(req: Request) {
     console.log('[meals/swap] profile:', profile.name, '| restrictions:', profile.food_preferences?.restrictions?.join(', ') || 'none')
     console.log('[meals/swap] bloodwork markers:', bloodwork?.length ?? 0)
 
-    // ── Step 4: build prompts ──────────────────────────────────────────────
-    const systemPrompt = buildSystemPrompt(profile, bloodwork || [])
-    const swapPrompt = buildMealSwapPrompt(meal as Record<string, unknown>, mealType, feedback)
-    console.log('[meals/swap] system prompt:', systemPrompt.length, 'chars | swap prompt:', swapPrompt.length, 'chars')
+    // ── Step 4: build prompt ───────────────────────────────────────────────
+    // No system prompt — a long system prompt triggers heavy thinking that eats the output
+    // token budget (thinking + output share the same maxOutputTokens pool in Gemini 2.5 Flash).
+    // Allergies/restrictions are already embedded directly in the swap prompt.
+    const swapPrompt = buildMealSwapPrompt(
+      meal as Record<string, unknown>,
+      mealType,
+      feedback,
+      profile  // pass profile so prompt can embed constraints inline
+    )
+    console.log('[meals/swap] swap prompt:', swapPrompt.length, 'chars')
     console.log('[meals/swap] swap prompt full:')
     console.log(swapPrompt)
 
     // ── Step 5: call Gemini ────────────────────────────────────────────────
+    // 16000 tokens: thinking uses ~3-4k, leaving 12k+ for the JSON response
     console.log('[meals/swap] calling Gemini API...')
     let rawText: string | null
     try {
       const result = await callOpenRouter(
-        [{ role: 'system', content: systemPrompt }, { role: 'user', content: swapPrompt }],
-        4096,
-        'meals/swap',                             // enables full request + response logging
-        { responseMimeType: 'application/json' } // forces Gemini to return pure JSON, no markdown
+        [{ role: 'user', content: swapPrompt }],
+        16000,
+        'meals/swap',
+        { responseMimeType: 'application/json' }
       )
       rawText = result.text
       console.log('[meals/swap] Gemini stopReason:', result.stopReason)

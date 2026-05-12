@@ -257,26 +257,41 @@ A warm, personal closing paragraph addressed to the patient by name. Acknowledge
   return prompt
 }
 
-export function buildMealSwapPrompt(currentMeal: Record<string, unknown>, mealType: string, feedback?: string): string {
+export function buildMealSwapPrompt(
+  currentMeal: Record<string, unknown>,
+  mealType: string,
+  feedback?: string,
+  profile?: UserProfile
+): string {
   const name = currentMeal.name as string || 'unknown'
   const calories = currentMeal.calories as number || 0
   const protein = currentMeal.protein_g as number || 0
   const carbs = currentMeal.carbs_g as number || 0
   const fat = currentMeal.fat_g as number || 0
 
+  const restrictions = profile?.food_preferences?.restrictions?.join(', ') || 'none'
+  const allergies = profile?.food_preferences?.allergies?.join(', ') || 'none'
+  const cuisines = profile?.food_preferences?.loved_cuisines?.join(', ') || 'any'
+  const conditions = profile?.medical_profile?.conditions?.join(', ') || 'none'
+
   const feedbackLine = feedback
-    ? `USER FEEDBACK — prioritise this above all else: "${feedback}"`
-    : 'Offer real variety from the original'
+    ? `PRIORITY — user said: "${feedback}"`
+    : 'Offer real variety from the original meal'
 
-  return `Swap this ${mealType}: "${name}" (~${calories} cal, ${protein}g protein, ${carbs}g carbs, ${fat}g fat)
-${feedbackLine}
+  return `Generate 3 alternative ${mealType} meals to replace "${name}".
 
-Rules: match macros within 15%, respect all user allergies/restrictions, delicious and restaurant-quality, appropriate for ${mealType}.
+USER CONSTRAINTS (must respect exactly):
+- Dietary restrictions: ${restrictions}
+- Allergies: ${allergies}
+- Loved cuisines: ${cuisines}
+- Medical conditions: ${conditions}
+- Macro targets: ~${calories} cal, ~${protein}g protein, ~${carbs}g carbs, ~${fat}g fat (within 15%)
+- ${feedbackLine}
 
-YOUR ENTIRE RESPONSE MUST BE ONLY THE JSON ARRAY BELOW.
-Start with [ and end with ]. No markdown. No backticks. No explanation. No text before or after.
-
-[{"id":"uuid4","name":"Meal Name","description":"appetizing 1-sentence description","reasoning":"specific health/nutrition reason","calories":450,"protein_g":32,"carbs_g":40,"fat_g":14,"fiber_g":6,"ingredients":["1 cup item","2 tbsp item"],"image_url":null,"image_prompt":"watercolor illustration of Meal Name, Great British Baking Show style"},{"id":"uuid4","name":"...","description":"...","reasoning":"...","calories":0,"protein_g":0,"carbs_g":0,"fat_g":0,"fiber_g":0,"ingredients":["..."],"image_url":null,"image_prompt":"..."},{"id":"uuid4","name":"...","description":"...","reasoning":"...","calories":0,"protein_g":0,"carbs_g":0,"fat_g":0,"fiber_g":0,"ingredients":["..."],"image_url":null,"image_prompt":"..."}]`
+Return a JSON array of exactly 3 meal objects. Each object must have these exact fields:
+id (generate a uuid), name, description (appetizing 1-sentence), reasoning (health reason),
+calories, protein_g, carbs_g, fat_g, fiber_g, ingredients (array of strings with quantities),
+image_url (always null), image_prompt (short watercolor art description)`
 }
 
 export function buildWorkoutSwapPrompt(currentWorkout: Record<string, unknown>, day: string): string {
