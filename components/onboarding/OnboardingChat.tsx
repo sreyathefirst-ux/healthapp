@@ -134,6 +134,8 @@ export function OnboardingChat() {
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
+    // Reset input so same file can be re-uploaded if needed
+    e.target.value = ''
 
     setUploadingFile(true)
     setMessages((prev) => [
@@ -148,18 +150,31 @@ export function OnboardingChat() {
       const res = await fetch('/api/bloodwork/parse', { method: 'POST', body: formData })
       const data = await res.json()
 
-      if (data.biomarkers && data.biomarkers.length > 0) {
-        const markerList = data.biomarkers.slice(0, 5).map((b: { biomarker_name: string; value: number; unit: string }) => `• ${b.biomarker_name}: ${b.value} ${b.unit}`).join('\n')
-        const msg = `Got it! I found the following markers in your bloodwork:\n${markerList}${data.biomarkers.length > 5 ? `\n...and ${data.biomarkers.length - 5} more` : ''}\n\nThis will help me tailor your plan. Let's move on!`
+      if (data.success && data.biomarkers && data.biomarkers.length > 0) {
+        const shown = data.biomarkers.slice(0, 6)
+        const markerList = shown
+          .map((b: { biomarker_name: string; value: number; unit: string }) => `• ${b.biomarker_name}: ${b.value} ${b.unit}`)
+          .join('\n')
+        const extra = data.biomarkers.length > 6 ? `\n...and ${data.biomarkers.length - 6} more` : ''
+        const msg = `Got it! I found these markers in your bloodwork:\n${markerList}${extra}\n\nThis will help me tailor your plan. Let's move on!`
         setMessages((prev) => [...prev, { role: 'assistant', content: msg }])
         setTimeout(() => setCurrentStep(3), 1500)
       } else {
-        setMessages((prev) => [...prev, { role: 'assistant', content: "I had trouble reading that file. No worries — let's move on without it!" }])
-        setTimeout(() => setCurrentStep(3), 1500)
+        const errMsg = data.error || 'No biomarkers found'
+        console.error('[OnboardingChat] bloodwork parse returned no data:', errMsg)
+        setMessages((prev) => [
+          ...prev,
+          { role: 'assistant', content: "I couldn't read that PDF. Can you try uploading again?" },
+        ])
+        // Stay on step 2 so user can retry
       }
-    } catch {
-      setMessages((prev) => [...prev, { role: 'assistant', content: "Upload failed. Let's skip for now and move on!" }])
-      setTimeout(() => setCurrentStep(3), 1500)
+    } catch (err) {
+      console.error('[OnboardingChat] bloodwork upload fetch error:', err)
+      setMessages((prev) => [
+        ...prev,
+        { role: 'assistant', content: "I couldn't read that PDF. Can you try uploading again?" },
+      ])
+      // Stay on step 2 so user can retry
     } finally {
       setUploadingFile(false)
     }
