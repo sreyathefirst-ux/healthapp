@@ -1,9 +1,19 @@
-import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
+import { createClient as createSupabaseAdminClient } from '@supabase/supabase-js'
 
 const GOOGLE_AI_KEY = process.env.GOOGLE_AI_KEY
 const GEMINI_IMAGE_MODEL = 'gemini-2.5-flash-image'
 const GEMINI_IMAGE_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_IMAGE_MODEL}:generateContent`
 const BUCKET = 'meal-images'
+
+// Plain admin client — no cookie/session handling, service role key bypasses RLS
+function createAdminClient() {
+  return createSupabaseAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { persistSession: false, autoRefreshToken: false } }
+  )
+}
 
 function getWeekStartDate(): string {
   const now = new Date()
@@ -13,7 +23,7 @@ function getWeekStartDate(): string {
   return now.toISOString().split('T')[0]
 }
 
-async function ensureBucketPublic(supabaseAdmin: ReturnType<typeof createServiceClient>) {
+async function ensureBucketPublic(supabaseAdmin: ReturnType<typeof createAdminClient>) {
   try {
     const { error: createErr } = await supabaseAdmin.storage.createBucket(BUCKET, { public: true })
     if (!createErr) {
@@ -54,8 +64,9 @@ export async function POST(req: Request) {
     }
     console.log('[images/meal] user:', user.id.slice(0, 8))
 
-    // Service role client for storage admin operations
-    const supabaseAdmin = createServiceClient()
+    // Plain admin client (no cookies) — service role key truly bypasses RLS
+    const supabaseAdmin = createAdminClient()
+    console.log('[images/meal] admin client created (service role, no cookie JWT)')
 
     const prompt = imagePrompt ||
       `A hand-drawn watercolor illustration of ${mealName}, rendered in fine liner pen with loose watercolor fill, in the style of The Great British Baking Show recipe cards. Show a close-up view with warm, rich colors on a sketchbook paper texture background. Artistic and food-forward, no photography.`
