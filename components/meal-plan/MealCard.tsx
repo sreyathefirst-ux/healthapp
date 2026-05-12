@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
@@ -20,6 +20,14 @@ interface MealCardProps {
 export function MealCard({ meal, mealType, day, logStatus, onSwap, onLog, onViewRecipe }: MealCardProps) {
   const [imageError, setImageError] = useState(false)
 
+  // Reset error state whenever image_url changes (e.g. after background generation completes)
+  useEffect(() => {
+    setImageError(false)
+    if (meal.image_url) {
+      console.log('[MealCard]', meal.name, '— image_url:', meal.image_url.slice(0, 80))
+    }
+  }, [meal.image_url, meal.name])
+
   const logButtons: { status: MealLogStatus; label: string }[] = [
     { status: 'eaten', label: '✅' },
     { status: 'swapped', label: '🔄' },
@@ -36,7 +44,10 @@ export function MealCard({ meal, mealType, day, logStatus, onSwap, onLog, onView
             alt={meal.name}
             fill
             className="object-cover"
-            onError={() => setImageError(true)}
+            onError={() => {
+              console.error('[MealCard] image failed to load for:', meal.name, '| src:', meal.image_url?.slice(0, 80))
+              setImageError(true)
+            }}
           />
         ) : (
           <div className="flex items-center justify-center h-full text-5xl">

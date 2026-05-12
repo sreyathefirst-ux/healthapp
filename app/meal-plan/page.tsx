@@ -157,6 +157,13 @@ export default function MealPlanPage() {
         }
         if (normalizedPlan) {
           console.log('[meal-plan PAGE] normalized days:', Object.keys(normalizedPlan.days))
+          // Log image_url status for today's meals
+          const todayMeals = normalizedPlan.days[selectedDay as keyof typeof normalizedPlan.days] as unknown as Record<string, { name: string; image_url: string | null }> | undefined
+          if (todayMeals) {
+            for (const [mt, meal] of Object.entries(todayMeals)) {
+              console.log(`[meal-plan PAGE] ${mt}: "${meal?.name}" | image_url: ${meal?.image_url ? meal.image_url.slice(0, 70) : 'NULL'}`)
+            }
+          }
         }
         setPlan(normalizedPlan)
 
