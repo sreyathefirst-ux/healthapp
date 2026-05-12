@@ -16,10 +16,10 @@ const DAY_LABELS: Record<string, string> = {
 
 function getWeekStartDate(): string {
   const now = new Date()
-  const day = now.getDay()
-  const diff = now.getDate() - day + (day === 0 ? -6 : 1)
-  const monday = new Date(now.setDate(diff))
-  return monday.toISOString().split('T')[0]
+  const day = now.getUTCDay()
+  const diff = now.getUTCDate() - day + (day === 0 ? -6 : 1)
+  now.setUTCDate(diff)
+  return now.toISOString().split('T')[0]
 }
 
 interface PlanData {

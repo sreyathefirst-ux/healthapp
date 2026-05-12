@@ -7,10 +7,10 @@ import { WorkoutPlan } from '@/types'
 
 function getWeekStartDate(): string {
   const now = new Date()
-  const day = now.getDay()
-  const diff = now.getDate() - day + (day === 0 ? -6 : 1)
-  const monday = new Date(now.setDate(diff))
-  return monday.toISOString().split('T')[0]
+  const day = now.getUTCDay()
+  const diff = now.getUTCDate() - day + (day === 0 ? -6 : 1)
+  now.setUTCDate(diff)
+  return now.toISOString().split('T')[0]
 }
 
 function extractJson(text: string): unknown {
@@ -115,6 +115,9 @@ export async function POST(_req: Request) {
       return Response.json({ error: 'Failed to generate workout plan' }, { status: 500 })
     }
 
+    const planJson = JSON.stringify(plan)
+    console.log('[workout plan] pre-save — week:', weekStart, '| days:', Object.keys(plan.days || {}), '| JSON size:', planJson.length, 'chars')
+
     const { error: saveError } = await supabase.from('weekly_plans').upsert(
       {
         user_id: user.id,
@@ -126,10 +129,13 @@ export async function POST(_req: Request) {
     )
 
     if (saveError) {
-      console.error('[workout plan] upsert error:', saveError.message, saveError.details)
-      return Response.json({ error: saveError.message }, { status: 500 })
+      console.error('[workout plan] SAVE ERROR code:', saveError.code)
+      console.error('[workout plan] SAVE ERROR message:', saveError.message)
+      console.error('[workout plan] SAVE ERROR details:', saveError.details)
+      console.error('[workout plan] SAVE ERROR hint:', saveError.hint)
+      return Response.json({ error: `Save failed: ${saveError.message}` }, { status: 500 })
     }
-    console.log('[workout plan] saved for week', weekStart, '— days:', Object.keys(plan.days || {}).length)
+    console.log('[workout plan] saved OK — week:', weekStart)
 
     return Response.json({ success: true, plan })
   } catch (error) {

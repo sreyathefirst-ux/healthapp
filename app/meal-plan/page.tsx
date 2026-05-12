@@ -32,11 +32,11 @@ function normalizePlan(raw: unknown): MealPlan | null {
 
 function getWeekStartDate(offset = 0): string {
   const now = new Date()
-  now.setDate(now.getDate() + offset * 7)
-  const day = now.getDay()
-  const diff = now.getDate() - day + (day === 0 ? -6 : 1)
-  const monday = new Date(now.setDate(diff))
-  return monday.toISOString().split('T')[0]
+  now.setUTCDate(now.getUTCDate() + offset * 7)
+  const day = now.getUTCDay()
+  const diff = now.getUTCDate() - day + (day === 0 ? -6 : 1)
+  now.setUTCDate(diff)
+  return now.toISOString().split('T')[0]
 }
 
 export default function MealPlanPage() {

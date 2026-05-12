@@ -9,10 +9,10 @@ const REQUIRED_DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', '
 
 function getWeekStartDate(): string {
   const now = new Date()
-  const day = now.getDay()
-  const diff = now.getDate() - day + (day === 0 ? -6 : 1)
-  const monday = new Date(now.setDate(diff))
-  return monday.toISOString().split('T')[0]
+  const day = now.getUTCDay()
+  const diff = now.getUTCDate() - day + (day === 0 ? -6 : 1)
+  now.setUTCDate(diff)
+  return now.toISOString().split('T')[0]
 }
 
 function extractJson(text: string): unknown {
@@ -177,7 +177,8 @@ export async function POST(req: Request) {
     plan = { ...plan, days: normalizedDays } as MealPlan
 
     // ── Save ──────────────────────────────────────────────────────────────────
-    console.log('[meal plan] saving to Supabase — week:', weekStart, 'days:', Object.keys(plan.days))
+    const planJson = JSON.stringify(plan)
+    console.log('[meal plan] pre-save — week:', weekStart, '| days:', Object.keys(plan.days), '| JSON size:', planJson.length, 'chars')
     const { error: saveError, data: savedRow } = await supabase.from('weekly_plans').upsert(
       {
         user_id: user.id,

@@ -16,11 +16,11 @@ const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
 function getWeekStartDate(offset = 0): string {
   const now = new Date()
-  now.setDate(now.getDate() + offset * 7)
-  const day = now.getDay()
-  const diff = now.getDate() - day + (day === 0 ? -6 : 1)
-  const monday = new Date(now.setDate(diff))
-  return monday.toISOString().split('T')[0]
+  now.setUTCDate(now.getUTCDate() + offset * 7)
+  const day = now.getUTCDay()
+  const diff = now.getUTCDate() - day + (day === 0 ? -6 : 1)
+  now.setUTCDate(diff)
+  return now.toISOString().split('T')[0]
 }
 
 export default function WorkoutPlanPage() {
@@ -53,6 +53,7 @@ export default function WorkoutPlanPage() {
         if (!user) { setLoading(false); return }
 
         const weekStart = getWeekStartDate(weekOffset)
+        console.log('[workout-plan PAGE] weekStart queried:', weekStart)
         const { data, error } = await supabase
           .from('weekly_plans')
           .select('workout_plan')
@@ -61,6 +62,7 @@ export default function WorkoutPlanPage() {
           .maybeSingle()
 
         if (error) throw error
+        console.log('[workout-plan PAGE] DB row found:', data !== null, '| workout_plan null:', data?.workout_plan == null)
         setPlan((data?.workout_plan as WorkoutPlan) ?? null)
 
         const today = new Date().toISOString().split('T')[0]
