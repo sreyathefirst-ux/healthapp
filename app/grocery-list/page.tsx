@@ -1,70 +1,74 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { AppShell } from '@/components/layout/AppShell'
-import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { createClient } from '@/lib/supabase/client'
 import { MealPlan, Meal } from '@/types'
-import { Printer, Trash2 } from 'lucide-react'
+import { Printer, RefreshCw, ShoppingCart } from 'lucide-react'
 
-type GroceryCategory = 'Produce' | 'Proteins' | 'Dairy' | 'Pantry' | 'Other'
-
-const categoryKeywords: Record<GroceryCategory, string[]> = {
-  Produce: ['lettuce', 'spinach', 'kale', 'tomato', 'onion', 'garlic', 'pepper', 'cucumber', 'carrot', 'broccoli', 'zucchini', 'mushroom', 'apple', 'banana', 'berry', 'lemon', 'lime', 'avocado', 'celery', 'herb', 'basil', 'cilantro', 'parsley', 'mint'],
-  Proteins: ['chicken', 'beef', 'pork', 'fish', 'salmon', 'tuna', 'shrimp', 'turkey', 'egg', 'tofu', 'tempeh', 'lentil', 'bean', 'chickpea'],
-  Dairy: ['milk', 'cheese', 'yogurt', 'butter', 'cream', 'mozzarella', 'parmesan', 'feta', 'cottage'],
-  Pantry: ['rice', 'pasta', 'oat', 'flour', 'bread', 'oil', 'olive oil', 'vinegar', 'sauce', 'soy sauce', 'honey', 'maple syrup', 'salt', 'pepper', 'spice', 'cumin', 'paprika', 'turmeric', 'cinnamon', 'nuts', 'seeds', 'nut butter', 'quinoa', 'barley'],
-  Other: [],
+interface GrocerySection {
+  title: string
+  emoji: string
+  items: string[]
 }
 
-function categorize(ingredient: string): GroceryCategory {
-  const lower = ingredient.toLowerCase()
-  for (const [category, keywords] of Object.entries(categoryKeywords) as [GroceryCategory, string[]][]) {
-    if (category === 'Other') continue
-    if (keywords.some((kw) => lower.includes(kw))) return category
-  }
-  return 'Other'
+function getWeekStartDate(): string {
+  const now = new Date()
+  const day = now.getUTCDay()
+  const diff = now.getUTCDate() - day + (day === 0 ? -6 : 1)
+  now.setUTCDate(diff)
+  return now.toISOString().split('T')[0]
 }
 
-function extractIngredients(plan: MealPlan): Map<string, GroceryCategory> {
-  const ingredients = new Map<string, GroceryCategory>()
-
+function extractAllIngredients(plan: MealPlan): string[] {
+  const seen = new Set<string>()
+  const result: string[] = []
   for (const day of Object.values(plan.days)) {
     for (const meal of Object.values(day) as Meal[]) {
       if (meal?.ingredients) {
         for (const ing of meal.ingredients) {
-          const clean = ing.trim().toLowerCase()
-          if (clean && !ingredients.has(clean)) {
-            ingredients.set(clean, categorize(clean))
+          const clean = ing.trim()
+          if (clean && !seen.has(clean.toLowerCase())) {
+            seen.add(clean.toLowerCase())
+            result.push(clean)
           }
         }
       }
     }
   }
-  return ingredients
-}
-
-function mapToArray<K, V>(map: Map<K, V>): Array<[K, V]> {
-  const result: Array<[K, V]> = []
-  map.forEach((value, key) => result.push([key, value]))
   return result
 }
 
-function mapKeysToArray<K>(map: Map<K, unknown>): K[] {
-  const result: K[] = []
-  map.forEach((_, key) => result.push(key))
-  return result
-}
+const CACHE_KEY_PREFIX = 'grocery_list_'
 
 export default function GroceryListPage() {
-  const [ingredients, setIngredients] = useState<Map<string, GroceryCategory>>(new Map())
+  const [sections, setSections] = useState<GrocerySection[]>([])
   const [checked, setChecked] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
+  const [generating, setGenerating] = useState(false)
+  const [hasPlan, setHasPlan] = useState(false)
   const [weeklyPlanId, setWeeklyPlanId] = useState<string | null>(null)
+  const [weekStart, setWeekStart] = useState('')
+  const [mealPlan, setMealPlan] = useState<MealPlan | null>(null)
+
+  const saveChecklist = useCallback(async (newChecked: Set<string>, planId: string | null, allSections: GrocerySection[]) => {
+    if (!planId) return
+    const checklist: Record<string, boolean> = {}
+    for (const section of allSections) {
+      for (const item of section.items) {
+        checklist[item] = newChecked.has(item)
+      }
+    }
+    const supabase = createClient()
+    await supabase.from('weekly_plans').update({ grocery_checklist: checklist }).eq('id', planId)
+  }, [])
 
   useEffect(() => {
-    async function fetchGroceries() {
+    const ws = getWeekStartDate()
+    setWeekStart(ws)
+
+    async function fetchData() {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { setLoading(false); return }
@@ -73,21 +77,75 @@ export default function GroceryListPage() {
         .from('weekly_plans')
         .select('id, meal_plan, grocery_checklist')
         .eq('user_id', user.id)
-        .order('week_start_date', { ascending: false })
-        .limit(1)
+        .eq('week_start_date', ws)
         .maybeSingle()
 
-      if (data?.meal_plan) {
-        setIngredients(extractIngredients(data.meal_plan as MealPlan))
-        setWeeklyPlanId(data.id)
-        const checklist = (data.grocery_checklist as Record<string, boolean>) || {}
-        const checkedKeys = Object.entries(checklist).filter(([, v]) => v).map(([k]) => k)
-        setChecked(new Set(checkedKeys))
+      if (!data?.meal_plan) {
+        setHasPlan(false)
+        setLoading(false)
+        return
       }
+
+      setHasPlan(true)
+      setWeeklyPlanId(data.id)
+      setMealPlan(data.meal_plan as MealPlan)
+
+      // Restore checkbox state
+      const checklist = (data.grocery_checklist as Record<string, boolean>) || {}
+      const checkedItems = Object.entries(checklist).filter(([, v]) => v).map(([k]) => k)
+      setChecked(new Set(checkedItems))
+
+      // Try cache first
+      const cacheKey = `${CACHE_KEY_PREFIX}${ws}`
+      const cached = localStorage.getItem(cacheKey)
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached)
+          if (parsed.sections?.length) {
+            setSections(parsed.sections)
+            setLoading(false)
+            return
+          }
+        } catch {
+          localStorage.removeItem(cacheKey)
+        }
+      }
+
+      // No cache — auto-generate
       setLoading(false)
+      generateList(data.meal_plan as MealPlan, ws)
     }
-    fetchGroceries()
+
+    fetchData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  async function generateList(plan: MealPlan, ws: string) {
+    setGenerating(true)
+    try {
+      const ingredients = extractAllIngredients(plan)
+      console.log('[grocery] sending', ingredients.length, 'unique ingredient lines to API')
+
+      const res = await fetch('/api/plans/grocery', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ingredients }),
+      })
+      const data = await res.json()
+
+      if (data.sections?.length) {
+        setSections(data.sections)
+        // Cache for this week
+        localStorage.setItem(`${CACHE_KEY_PREFIX}${ws}`, JSON.stringify({ sections: data.sections }))
+        // Reset checklist since list was regenerated
+        setChecked(new Set())
+      }
+    } catch (e) {
+      console.error('[grocery] generation failed:', e)
+    } finally {
+      setGenerating(false)
+    }
+  }
 
   async function toggleItem(item: string) {
     const newChecked = new Set(checked)
@@ -97,41 +155,103 @@ export default function GroceryListPage() {
       newChecked.add(item)
     }
     setChecked(newChecked)
-
-    if (!weeklyPlanId) return
-    const supabase = createClient()
-    const checklist: Record<string, boolean> = {}
-    mapKeysToArray(ingredients).forEach((ing) => {
-      checklist[ing] = newChecked.has(ing)
-    })
-    await supabase.from('weekly_plans').update({ grocery_checklist: checklist }).eq('id', weeklyPlanId)
+    await saveChecklist(newChecked, weeklyPlanId, sections)
   }
 
   function clearCompleted() {
-    const newChecked = new Set<string>()
-    setChecked(newChecked)
-    if (!weeklyPlanId) return
-    const supabase = createClient()
-    supabase.from('weekly_plans').update({ grocery_checklist: {} }).eq('id', weeklyPlanId)
+    setChecked(new Set())
+    saveChecklist(new Set(), weeklyPlanId, sections)
   }
 
-  const categories = ['Produce', 'Proteins', 'Dairy', 'Pantry', 'Other'] as GroceryCategory[]
-  const grouped: Record<GroceryCategory, string[]> = {
-    Produce: [], Proteins: [], Dairy: [], Pantry: [], Other: []
+  function handleRegenerate() {
+    if (!mealPlan) return
+    // Clear cache so a fresh list is generated
+    localStorage.removeItem(`${CACHE_KEY_PREFIX}${weekStart}`)
+    setSections([])
+    setChecked(new Set())
+    generateList(mealPlan, weekStart)
   }
-  mapToArray(ingredients).forEach(([ing, cat]) => {
-    grouped[cat].push(ing)
-  })
+
+  const totalItems = sections.reduce((acc, s) => acc + s.items.length, 0)
+  const checkedCount = checked.size
+  const uncheckedSections = sections.map((s) => ({
+    ...s,
+    items: s.items.filter((item) => !checked.has(item)),
+  })).filter((s) => s.items.length > 0)
+
+  if (loading) {
+    return (
+      <AppShell>
+        <div className="space-y-6">
+          <h1 className="text-2xl font-bold text-text-primary">Grocery List</h1>
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-white rounded-card p-5 animate-pulse">
+                <div className="h-5 bg-gray-200 rounded w-1/4 mb-4" />
+                {[1, 2, 3].map((j) => (
+                  <div key={j} className="h-4 bg-gray-100 rounded mb-2" />
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      </AppShell>
+    )
+  }
+
+  if (!hasPlan) {
+    return (
+      <AppShell>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+          <span className="text-7xl mb-6">🛒</span>
+          <h2 className="text-2xl font-bold text-text-primary mb-3">No grocery list yet</h2>
+          <p className="text-text-secondary mb-8 max-w-sm">
+            Generate your meal plan first — Vitalia will build a real shopping list organized by store section.
+          </p>
+        </div>
+      </AppShell>
+    )
+  }
+
+  if (generating && sections.length === 0) {
+    return (
+      <AppShell>
+        <div className="space-y-6">
+          <h1 className="text-2xl font-bold text-text-primary">Grocery List</h1>
+          <div className="flex flex-col items-center justify-center min-h-[40vh] text-center">
+            <div className="w-16 h-16 rounded-full bg-accent-primary/10 flex items-center justify-center mb-4 animate-pulse">
+              <ShoppingCart size={28} className="text-accent-primary" />
+            </div>
+            <h3 className="font-semibold text-text-primary mb-2">Building your shopping list…</h3>
+            <p className="text-text-secondary text-sm">Converting recipe quantities to real store amounts</p>
+          </div>
+        </div>
+      </AppShell>
+    )
+  }
 
   return (
     <AppShell>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-text-primary">Grocery List</h1>
+      <div className="space-y-6 print:space-y-4">
+        {/* Header */}
+        <div className="flex items-center justify-between print:hidden">
+          <div>
+            <h1 className="text-2xl font-bold text-text-primary">Grocery List</h1>
+            {totalItems > 0 && (
+              <p className="text-text-secondary text-sm mt-0.5">
+                {checkedCount} of {totalItems} items checked
+              </p>
+            )}
+          </div>
           <div className="flex gap-2">
-            <Button variant="ghost" size="sm" onClick={clearCompleted}>
-              <Trash2 size={14} />
-              Clear done
+            {checkedCount > 0 && (
+              <Button variant="ghost" size="sm" onClick={clearCompleted} className="text-text-secondary">
+                Clear done
+              </Button>
+            )}
+            <Button variant="ghost" size="sm" onClick={handleRegenerate} loading={generating} className="text-text-secondary">
+              <RefreshCw size={14} />
+              Refresh
             </Button>
             <Button variant="secondary" size="sm" onClick={() => window.print()}>
               <Printer size={14} />
@@ -140,39 +260,97 @@ export default function GroceryListPage() {
           </div>
         </div>
 
-        {loading ? (
-          <div className="text-center py-16 text-text-secondary">Loading groceries...</div>
-        ) : ingredients.size === 0 ? (
-          <div className="text-center py-16">
-            <span className="text-5xl block mb-4">🛒</span>
-            <h3 className="font-semibold text-text-primary mb-2">No grocery list yet</h3>
-            <p className="text-text-secondary">Generate your meal plan first to see your grocery list</p>
+        {/* Print header */}
+        <div className="hidden print:block">
+          <h1 className="text-2xl font-bold">Grocery List</h1>
+          <p className="text-sm text-gray-500">Week of {new Date(weekStart + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
+        </div>
+
+        {/* Progress bar */}
+        {totalItems > 0 && checkedCount > 0 && (
+          <div className="bg-white rounded-2xl p-4 shadow-card print:hidden">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-text-primary">Shopping progress</span>
+              <span className="text-sm font-bold text-accent-primary">{Math.round((checkedCount / totalItems) * 100)}%</span>
+            </div>
+            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-accent-primary rounded-full transition-all duration-300"
+                style={{ width: `${(checkedCount / totalItems) * 100}%` }}
+              />
+            </div>
           </div>
-        ) : (
-          categories.map((cat) => {
-            const items = grouped[cat]
-            if (items.length === 0) return null
-            return (
-              <Card key={cat}>
-                <h2 className="font-bold text-text-primary mb-3">{cat}</h2>
-                <div className="space-y-2">
-                  {items.sort().map((item) => (
-                    <label key={item} className="flex items-center gap-3 cursor-pointer group">
+        )}
+
+        {/* Generating overlay while refreshing */}
+        {generating && sections.length > 0 && (
+          <div className="text-center text-sm text-text-secondary animate-pulse py-2">
+            Refreshing shopping list…
+          </div>
+        )}
+
+        {/* Sections */}
+        {sections.map((section) => {
+          const uncheckedItems = section.items.filter((item) => !checked.has(item))
+          const checkedItems = section.items.filter((item) => checked.has(item))
+          return (
+            <div key={section.title} className="bg-white rounded-card shadow-card overflow-hidden print:shadow-none print:border print:border-gray-200">
+              {/* Section header */}
+              <div className="px-5 py-3 border-b border-gray-100 bg-gray-50/60 flex items-center gap-2">
+                <span className="text-lg">{section.emoji}</span>
+                <h2 className="font-bold text-text-primary text-sm tracking-wide uppercase">{section.title}</h2>
+                <span className="ml-auto text-xs text-text-secondary font-medium">
+                  {checkedItems.length > 0 ? `${checkedItems.length}/${section.items.length}` : section.items.length}
+                </span>
+              </div>
+
+              <div className="px-5 py-3 space-y-0.5">
+                {/* Unchecked items */}
+                {uncheckedItems.map((item) => (
+                  <label key={item} className="flex items-center gap-3 py-2.5 cursor-pointer group border-b border-gray-50 last:border-0 print:border-gray-200">
+                    <div className={`w-5 h-5 rounded-md border-2 flex-shrink-0 flex items-center justify-center transition-all print:hidden
+                      border-gray-300 group-hover:border-accent-primary`}>
                       <input
                         type="checkbox"
-                        checked={checked.has(item)}
+                        checked={false}
                         onChange={() => toggleItem(item)}
-                        className="w-5 h-5 rounded-md border-2 border-accent-primary accent-accent-primary"
+                        className="sr-only"
                       />
-                      <span className={`text-sm capitalize flex-1 ${checked.has(item) ? 'line-through text-text-secondary' : 'text-text-primary'}`}>
-                        {item}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              </Card>
-            )
-          })
+                    </div>
+                    <div className="hidden print:block w-4 h-4 border border-gray-400 rounded flex-shrink-0" />
+                    <span className="text-sm text-text-primary flex-1">{item}</span>
+                  </label>
+                ))}
+
+                {/* Checked items (dimmed, at bottom) */}
+                {checkedItems.map((item) => (
+                  <label key={item} className="flex items-center gap-3 py-2.5 cursor-pointer group border-b border-gray-50 last:border-0 print:hidden">
+                    <div className="w-5 h-5 rounded-md border-2 border-accent-primary bg-accent-primary flex-shrink-0 flex items-center justify-center">
+                      <input
+                        type="checkbox"
+                        checked={true}
+                        onChange={() => toggleItem(item)}
+                        className="sr-only"
+                      />
+                      <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 12 12">
+                        <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </div>
+                    <span className="text-sm text-text-secondary line-through flex-1">{item}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )
+        })}
+
+        {/* All done state */}
+        {sections.length > 0 && uncheckedSections.length === 0 && checkedCount > 0 && (
+          <div className="text-center py-8 print:hidden">
+            <span className="text-5xl block mb-3">🎉</span>
+            <h3 className="font-semibold text-text-primary mb-1">All done!</h3>
+            <p className="text-text-secondary text-sm">You've got everything on your list.</p>
+          </div>
         )}
       </div>
     </AppShell>
