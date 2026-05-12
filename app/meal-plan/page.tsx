@@ -116,8 +116,7 @@ export default function MealPlanPage() {
     fetchPlan()
   }, [weekOffset])
 
-  async function handleGenerate(requireConfirm = false) {
-    if (requireConfirm && !confirm("Regenerate this week's meal plan? This will replace your current plan.")) return
+  async function handleGenerate() {
     setGenerating(true)
     try {
       const res = await fetch('/api/plans/meal', { method: 'POST' })
@@ -212,7 +211,7 @@ export default function MealPlanPage() {
           <p className="text-text-secondary mb-8 max-w-sm">
             Vitalia will build a personalized 7-day meal plan based on your health profile, bloodwork, and food preferences.
           </p>
-          <Button onClick={() => handleGenerate(false)} loading={generating} size="lg">
+          <Button onClick={() => handleGenerate()} loading={generating} size="lg">
             Generate my first plan ✨
           </Button>
         </div>
@@ -227,7 +226,7 @@ export default function MealPlanPage() {
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-text-primary">Meal Plan</h1>
           {plan && (
-            <Button variant="secondary" size="sm" onClick={() => handleGenerate(true)} loading={generating}>
+            <Button variant="secondary" size="sm" onClick={() => handleGenerate()} loading={generating}>
               <RefreshCw size={14} />
               Regenerate
             </Button>
@@ -293,7 +292,7 @@ export default function MealPlanPage() {
           <div className="text-center py-8">
             <span className="text-4xl block mb-3">🍽️</span>
             <p className="text-text-secondary text-sm mb-4">No meals for this day in your plan.</p>
-            <Button variant="secondary" size="sm" onClick={() => handleGenerate(true)} loading={generating}>
+            <Button variant="secondary" size="sm" onClick={() => handleGenerate()} loading={generating}>
               Regenerate plan
             </Button>
           </div>

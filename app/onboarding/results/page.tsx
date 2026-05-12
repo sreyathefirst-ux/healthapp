@@ -36,32 +36,60 @@ export default function OnboardingResultsPage() {
   const [direction, setDirection] = useState(1)
   const [data, setData] = useState<PlanData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [pollCount, setPollCount] = useState(0)
+
+  async function loadData() {
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { router.push('/login'); return null }
+
+    const weekStart = getWeekStartDate()
+    const [plansRes, routineRes] = await Promise.all([
+      supabase.from('weekly_plans').select('meal_plan,workout_plan,health_report')
+        .eq('user_id', user.id).eq('week_start_date', weekStart).maybeSingle(),
+      supabase.from('routine_preferences').select('morning_items,night_items')
+        .eq('user_id', user.id).maybeSingle(),
+    ])
+
+    return {
+      mealPlan: (plansRes.data?.meal_plan as MealPlan) ?? null,
+      workoutPlan: (plansRes.data?.workout_plan as WorkoutPlan) ?? null,
+      healthReport: plansRes.data?.health_report ?? null,
+      morningItems: (routineRes.data?.morning_items as RoutineItem[]) ?? [],
+      nightItems: (routineRes.data?.night_items as RoutineItem[]) ?? [],
+    }
+  }
 
   useEffect(() => {
-    async function load() {
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.push('/login'); return }
-
-      const weekStart = getWeekStartDate()
-      const [plansRes, routineRes] = await Promise.all([
-        supabase.from('weekly_plans').select('meal_plan,workout_plan,health_report')
-          .eq('user_id', user.id).eq('week_start_date', weekStart).maybeSingle(),
-        supabase.from('routine_preferences').select('morning_items,night_items')
-          .eq('user_id', user.id).maybeSingle(),
-      ])
-
-      setData({
-        mealPlan: (plansRes.data?.meal_plan as MealPlan) ?? null,
-        workoutPlan: (plansRes.data?.workout_plan as WorkoutPlan) ?? null,
-        healthReport: plansRes.data?.health_report ?? null,
-        morningItems: (routineRes.data?.morning_items as RoutineItem[]) ?? [],
-        nightItems: (routineRes.data?.night_items as RoutineItem[]) ?? [],
-      })
+    loadData().then((result) => {
+      if (result) setData(result)
       setLoading(false)
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Auto-poll when data is missing, up to 5 times with 4s intervals
+  useEffect(() => {
+    const hasAllData = data?.mealPlan && data?.workoutPlan && data?.healthReport
+    if (!loading && !hasAllData && pollCount < 5) {
+      const timer = setTimeout(async () => {
+        const result = await loadData()
+        if (result) setData(result)
+        setPollCount((c) => c + 1)
+      }, 4000)
+      return () => clearTimeout(timer)
     }
-    load()
-  }, [router])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, loading, pollCount])
+
+  async function handleRefresh() {
+    setRefreshing(true)
+    const result = await loadData()
+    if (result) setData(result)
+    setPollCount(0)
+    setRefreshing(false)
+  }
 
   function go(next: number) {
     setDirection(next > slide ? 1 : -1)
@@ -83,6 +111,8 @@ export default function OnboardingResultsPage() {
       </div>
     )
   }
+
+  const isPolling = !loading && pollCount < 5 && !(data?.mealPlan && data?.workoutPlan && data?.healthReport)
 
   return (
     <div className="min-h-screen bg-bg flex flex-col">
@@ -127,10 +157,10 @@ export default function OnboardingResultsPage() {
             className="absolute inset-0 overflow-y-auto"
           >
             <div className="max-w-2xl mx-auto px-4 py-6 pb-24">
-              {slide === 0 && <HealthReportSlide report={data?.healthReport ?? null} />}
-              {slide === 1 && <MealPlanSlide plan={data?.mealPlan ?? null} />}
-              {slide === 2 && <WorkoutPlanSlide plan={data?.workoutPlan ?? null} />}
-              {slide === 3 && <RoutineSlide morningItems={data?.morningItems ?? []} nightItems={data?.nightItems ?? []} />}
+              {slide === 0 && <HealthReportSlide report={data?.healthReport ?? null} polling={isPolling} onRefresh={handleRefresh} refreshing={refreshing} />}
+              {slide === 1 && <MealPlanSlide plan={data?.mealPlan ?? null} polling={isPolling} onRefresh={handleRefresh} refreshing={refreshing} />}
+              {slide === 2 && <WorkoutPlanSlide plan={data?.workoutPlan ?? null} polling={isPolling} onRefresh={handleRefresh} refreshing={refreshing} />}
+              {slide === 3 && <RoutineSlide morningItems={data?.morningItems ?? []} nightItems={data?.nightItems ?? []} polling={isPolling} onRefresh={handleRefresh} refreshing={refreshing} />}
             </div>
           </motion.div>
         </AnimatePresence>
@@ -170,14 +200,37 @@ export default function OnboardingResultsPage() {
   )
 }
 
-function HealthReportSlide({ report }: { report: string | null }) {
+interface SlideProps {
+  polling: boolean
+  onRefresh: () => void
+  refreshing: boolean
+}
+
+function PendingSlide({ emoji, label, polling, onRefresh, refreshing }: { emoji: string; label: string } & SlideProps) {
+  return (
+    <div className="text-center py-12 text-text-secondary">
+      <span className="text-4xl block mb-3">{emoji}</span>
+      {polling ? (
+        <p className="animate-pulse">{label} is being generated — checking automatically...</p>
+      ) : (
+        <>
+          <p className="mb-4">{label} is still being prepared.</p>
+          <button
+            onClick={onRefresh}
+            disabled={refreshing}
+            className="text-sm font-medium text-accent-primary underline disabled:opacity-50"
+          >
+            {refreshing ? 'Checking...' : 'Check again'}
+          </button>
+        </>
+      )}
+    </div>
+  )
+}
+
+function HealthReportSlide({ report, polling, onRefresh, refreshing }: { report: string | null } & SlideProps) {
   if (!report) {
-    return (
-      <div className="text-center py-12 text-text-secondary">
-        <span className="text-4xl block mb-3">📋</span>
-        <p>Health report is still being prepared. Check back in your dashboard.</p>
-      </div>
-    )
+    return <PendingSlide emoji="📋" label="Health report" polling={polling} onRefresh={onRefresh} refreshing={refreshing} />
   }
 
   return (
@@ -222,14 +275,9 @@ function HealthReportSlide({ report }: { report: string | null }) {
   )
 }
 
-function MealPlanSlide({ plan }: { plan: MealPlan | null }) {
+function MealPlanSlide({ plan, polling, onRefresh, refreshing }: { plan: MealPlan | null } & SlideProps) {
   if (!plan) {
-    return (
-      <div className="text-center py-12 text-text-secondary">
-        <span className="text-4xl block mb-3">🥗</span>
-        <p>Meal plan is still being prepared. View it in your dashboard.</p>
-      </div>
-    )
+    return <PendingSlide emoji="🥗" label="Meal plan" polling={polling} onRefresh={onRefresh} refreshing={refreshing} />
   }
 
   return (
@@ -274,14 +322,9 @@ function MealPlanSlide({ plan }: { plan: MealPlan | null }) {
   )
 }
 
-function WorkoutPlanSlide({ plan }: { plan: WorkoutPlan | null }) {
+function WorkoutPlanSlide({ plan, polling, onRefresh, refreshing }: { plan: WorkoutPlan | null } & SlideProps) {
   if (!plan) {
-    return (
-      <div className="text-center py-12 text-text-secondary">
-        <span className="text-4xl block mb-3">💪</span>
-        <p>Workout plan is still being prepared. View it in your dashboard.</p>
-      </div>
-    )
+    return <PendingSlide emoji="💪" label="Workout plan" polling={polling} onRefresh={onRefresh} refreshing={refreshing} />
   }
 
   const workoutDays = DAYS.filter(d => plan.days?.[d]?.type === 'workout').length
@@ -342,16 +385,11 @@ function WorkoutPlanSlide({ plan }: { plan: WorkoutPlan | null }) {
   )
 }
 
-function RoutineSlide({ morningItems, nightItems }: { morningItems: RoutineItem[]; nightItems: RoutineItem[] }) {
+function RoutineSlide({ morningItems, nightItems, polling, onRefresh, refreshing }: { morningItems: RoutineItem[]; nightItems: RoutineItem[] } & SlideProps) {
   const hasData = morningItems.length > 0 || nightItems.length > 0
 
   if (!hasData) {
-    return (
-      <div className="text-center py-12 text-text-secondary">
-        <span className="text-4xl block mb-3">🌅</span>
-        <p>Your routine will be available in your dashboard.</p>
-      </div>
-    )
+    return <PendingSlide emoji="🌅" label="Daily routine" polling={polling} onRefresh={onRefresh} refreshing={refreshing} />
   }
 
   return (

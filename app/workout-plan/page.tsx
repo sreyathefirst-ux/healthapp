@@ -82,8 +82,7 @@ export default function WorkoutPlanPage() {
     fetchPlan()
   }, [weekOffset])
 
-  async function handleGenerate(requireConfirm = false) {
-    if (requireConfirm && !confirm("Regenerate this week's workout plan? This will replace your current plan.")) return
+  async function handleGenerate() {
     setGenerating(true)
     try {
       const res = await fetch('/api/plans/workout', { method: 'POST' })
@@ -194,7 +193,7 @@ export default function WorkoutPlanPage() {
           <p className="text-text-secondary mb-8 max-w-sm">
             Vitalia will build a personalized 7-day workout plan based on your fitness goals, equipment, and health profile.
           </p>
-          <Button onClick={() => handleGenerate(false)} loading={generating} size="lg">
+          <Button onClick={() => handleGenerate()} loading={generating} size="lg">
             Generate my first plan ✨
           </Button>
         </div>
@@ -208,7 +207,7 @@ export default function WorkoutPlanPage() {
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-text-primary">Workout Plan</h1>
           {plan && (
-            <Button variant="secondary" size="sm" onClick={() => handleGenerate(true)} loading={generating}>
+            <Button variant="secondary" size="sm" onClick={() => handleGenerate()} loading={generating}>
               <RefreshCw size={14} />
               Regenerate
             </Button>

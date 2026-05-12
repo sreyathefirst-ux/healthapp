@@ -303,17 +303,65 @@ Return ONLY the message text, no JSON.`
 }
 
 export function buildOnboardingSystemPrompt(step: number, stepGoal: string): string {
+  const stepSchemas: Record<number, string> = {
+    1: `{
+  "name": "string — first name",
+  "age": number,
+  "height_cm": number — convert from feet/inches if needed,
+  "weight_kg": number — convert from lbs if needed (1 lb = 0.453592 kg),
+  "conditions": ["string array of medical conditions, or []"],
+  "medications": ["string array of current medications, or []"],
+  "supplements": ["string array of supplements taken, or []"],
+  "exercise_history": "string — brief description of past exercise habits"
+}`,
+    2: `{
+  "has_bloodwork": boolean
+}`,
+    3: `{
+  "concerns": ["string array of health concerns"],
+  "goals": ["string array of at least 3 specific health goals"],
+  "success_definition": "string — what success looks like to them in 6 months"
+}`,
+    4: `{
+  "restrictions": ["string array — e.g. vegetarian, vegan, halal, kosher, or []"],
+  "allergies": ["string array — e.g. nuts, dairy, gluten, or []"],
+  "loved_cuisines": ["string array — favorite cuisines"],
+  "disliked_foods": ["string array — foods they dislike or avoid"],
+  "meal_prep_days": number — how many days per week they can meal prep,
+  "typical_meals": {}
+}`,
+    5: `{
+  "goals": ["string array — fitness goals"],
+  "activity_types": ["string array — e.g. weightlifting, running, yoga, cycling"],
+  "days_per_week": number — workout days per week,
+  "gym_access": boolean,
+  "home_equipment": ["string array — equipment at home, or []"],
+  "preferred_duration_mins": number — preferred workout duration in minutes
+}`,
+    6: `{
+  "wake_time": "HH:MM — 24-hour format e.g. 07:00",
+  "sleep_time": "HH:MM — 24-hour format e.g. 23:00",
+  "morning_items": ["string array — existing morning habits they mentioned"],
+  "night_items": ["string array — existing night habits they mentioned"]
+}`,
+  }
+
+  const schema = stepSchemas[step]
+  const schemaInstruction = schema
+    ? `\n\nWhen you output the step_complete block, the "data" field MUST use EXACTLY these field names:\n${schema}`
+    : ''
+
   return `You are Vitalia's onboarding assistant. You are warm, encouraging, and clinical.
 You are collecting the user's health profile to build their personalized plan.
 Ask ONE question at a time. Be conversational, not form-like.
-When you have collected all data for the current step, output a special JSON block:
+When you have collected all data for the current step, output a special JSON block at the END of your message:
 <step_complete>{"step": ${step}, "data": {...collected fields}}</step_complete>
-The frontend will detect this and advance to the next step.
+The frontend will detect this and advance to the next step.${schemaInstruction}
 Current step: ${step}
 Step goal: ${stepGoal}
 
 Step goals reference:
-Step 1: Collect name, age, height, weight, medical conditions, medications, supplements (7 fields total)
+Step 1: Collect name, age, height, weight, medical conditions, medications, supplements
 Step 2: Bloodwork upload - ask if they have bloodwork to upload
 Step 3: Collect health concerns and goals (at least 3 goals)
 Step 4: Collect food preferences (dietary restrictions, allergies, favorite cuisines, disliked foods, meal prep days)

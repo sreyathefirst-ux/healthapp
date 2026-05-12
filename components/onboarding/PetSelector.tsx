@@ -50,20 +50,24 @@ function makeTasks(): Task[] {
   return TASK_DEFINITIONS.map((t) => ({ ...t, status: 'pending' }))
 }
 
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
 async function callWithRetry(endpoint: string): Promise<boolean> {
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const res = await fetch(endpoint, { method: 'POST' })
       if (!res.ok) {
-        if (attempt === 0) continue
+        if (attempt === 0) { await sleep(2000); continue }
         return false
       }
       const data = await res.json()
       if (data.success) return true
-      if (attempt === 0) continue
+      if (attempt === 0) { await sleep(2000); continue }
       return false
     } catch {
-      if (attempt === 0) continue
+      if (attempt === 0) { await sleep(2000); continue }
       return false
     }
   }
