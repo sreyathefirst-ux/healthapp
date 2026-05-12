@@ -39,7 +39,12 @@ Rules:
 - Between 6-12 instructions
 - Return ONLY the JSON object`
 
-    const { text } = await callOpenRouter([{ role: 'user', content: prompt }], 2048)
+    const { text } = await callOpenRouter(
+      [{ role: 'user', content: prompt }],
+      2048,
+      undefined,
+      { responseMimeType: 'application/json' }
+    )
 
     if (!text) {
       console.error('[recipe] model returned no text')

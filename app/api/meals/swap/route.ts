@@ -112,7 +112,8 @@ export async function POST(req: Request) {
       const result = await callOpenRouter(
         [{ role: 'system', content: systemPrompt }, { role: 'user', content: swapPrompt }],
         4096,
-        'meals/swap'  // enables full request + response logging
+        'meals/swap',                             // enables full request + response logging
+        { responseMimeType: 'application/json' } // forces Gemini to return pure JSON, no markdown
       )
       rawText = result.text
       console.log('[meals/swap] Gemini stopReason:', result.stopReason)

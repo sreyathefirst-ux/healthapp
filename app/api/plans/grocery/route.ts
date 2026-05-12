@@ -79,7 +79,12 @@ Return ONLY valid JSON (no markdown, no backticks):
 
 Only include sections that have at least one item. Sort items alphabetically within each section.`
 
-    const { text } = await callOpenRouter([{ role: 'user', content: prompt }], 2048)
+    const { text } = await callOpenRouter(
+      [{ role: 'user', content: prompt }],
+      2048,
+      undefined,
+      { responseMimeType: 'application/json' }
+    )
 
     if (!text) {
       console.error('[grocery] model returned no text')

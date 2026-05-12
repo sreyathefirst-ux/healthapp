@@ -26,10 +26,14 @@ function toGeminiMessages(messages: ChatMessage[]) {
 export async function callOpenRouter(
   messages: ChatMessage[],
   maxTokens: number,
-  debugLabel?: string  // when provided, logs full request + response
+  debugLabel?: string,                           // when provided, logs full request + response
+  extraGenerationConfig?: Record<string, unknown> // e.g. { responseMimeType: 'application/json' }
 ): Promise<{ text: string | null; stopReason: string | null; usage: unknown }> {
   const key = process.env.GOOGLE_AI_KEY
-  const body = { ...toGeminiMessages(messages), generationConfig: { maxOutputTokens: maxTokens } }
+  const body = {
+    ...toGeminiMessages(messages),
+    generationConfig: { maxOutputTokens: maxTokens, ...extraGenerationConfig },
+  }
 
   if (debugLabel) {
     console.log(`[${debugLabel}] REQUEST TO GEMINI:`)
