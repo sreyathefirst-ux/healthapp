@@ -9,10 +9,10 @@ Return ONLY valid JSON matching this exact structure — no markdown, no explana
   "week_start_date": "YYYY-MM-DD",
   "days": {
     "monday": {
-      "breakfast": { "id": "uuid", "name": "...", "description": "...", "reasoning": "...", "calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0, "fiber_g": 0, "ingredients": ["..."], "image_url": null, "image_prompt": "A hand-drawn sketchbook watercolor illustration of [meal name]..." },
-      "lunch": { "id": "uuid", "name": "...", "description": "...", "reasoning": "...", "calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0, "fiber_g": 0, "ingredients": ["..."], "image_url": null, "image_prompt": "A hand-drawn sketchbook watercolor illustration of [meal name]..." },
-      "dinner": { "id": "uuid", "name": "...", "description": "...", "reasoning": "...", "calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0, "fiber_g": 0, "ingredients": ["..."], "image_url": null, "image_prompt": "A hand-drawn sketchbook watercolor illustration of [meal name]..." },
-      "snack": { "id": "uuid", "name": "...", "description": "...", "reasoning": "...", "calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0, "fiber_g": 0, "ingredients": ["..."], "image_url": null, "image_prompt": "A hand-drawn sketchbook watercolor illustration of [meal name]..." }
+      "breakfast": { "id": "uuid", "name": "...", "description": "...", "reasoning": "...", "calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0, "fiber_g": 0, "ingredients": ["2 cups ingredient", "..."], "image_url": null, "image_prompt": "A hand-drawn watercolor illustration of [meal name], fine liner pen with loose watercolor fill, Great British Baking Show recipe card style, warm rich colors, sketchbook paper texture" },
+      "lunch": { "id": "uuid", "name": "...", "description": "...", "reasoning": "...", "calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0, "fiber_g": 0, "ingredients": ["..."], "image_url": null, "image_prompt": "..." },
+      "dinner": { "id": "uuid", "name": "...", "description": "...", "reasoning": "...", "calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0, "fiber_g": 0, "ingredients": ["..."], "image_url": null, "image_prompt": "..." },
+      "snack": { "id": "uuid", "name": "...", "description": "...", "reasoning": "...", "calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0, "fiber_g": 0, "ingredients": ["..."], "image_url": null, "image_prompt": "..." }
     },
     "tuesday": { "breakfast": {...}, "lunch": {...}, "dinner": {...}, "snack": {...} },
     "wednesday": { "breakfast": {...}, "lunch": {...}, "dinner": {...}, "snack": {...} },
@@ -22,14 +22,24 @@ Return ONLY valid JSON matching this exact structure — no markdown, no explana
     "sunday": { "breakfast": {...}, "lunch": {...}, "dinner": {...}, "snack": {...} }
   }
 }
-Rules:
-- Meals must respect ALL allergies and restrictions — this is critical
-- Tailor to medical conditions (e.g. low glycemic for insulin resistance, iodine-rich for hypothyroidism)
-- Calories and macros must be medically appropriate for the user's weight and goals
-- Reasoning must reference the user's specific conditions or bloodwork markers
-- image_prompt must describe the meal in Great British Baking Show watercolor sketch style
-- Use real UUIDs for ids (generate random uuid-like strings)
-- ALL 7 days (monday through sunday) MUST be fully populated — never omit a day`
+
+QUALITY RULES — these are as important as the health rules:
+- Every meal must be GENUINELY DELICIOUS and restaurant-quality — never bland, generic, or boring
+- Use bold, layered flavors: umami-rich, aromatic, textured combinations the user would actually crave
+- Draw heavily from the user's loved cuisines to make meals feel personal and exciting
+- Use fresh herbs, quality fats, and interesting cooking techniques (roasted, caramelized, marinated)
+- description must read like an appetizing menu item — make it sound delicious, not clinical
+- Variety across the week: no ingredient or cooking method should repeat more than twice
+
+HEALTH RULES — non-negotiable:
+- Meals MUST respect ALL allergies and restrictions
+- Tailor nutrients to conditions (low glycemic for insulin resistance, omega-3-rich for inflammation, iodine-rich for hypothyroidism, etc.)
+- Use anti-inflammatory spices where relevant (turmeric, ginger, garlic, cinnamon)
+- Calories and macros must match user's weight and goals
+- Ingredients list: include quantities (e.g. "2 cups spinach", "1 tbsp olive oil")
+- reasoning must cite the specific condition or biomarker this meal addresses
+- Use real UUIDs for ids
+- ALL 7 days MUST be fully populated — never omit a day`
 
 export const WORKOUT_PLAN_PROMPT = `Generate a 7-day workout plan for this user.
 Return ONLY valid JSON matching this exact structure — no markdown, no explanation:
@@ -247,19 +257,25 @@ A warm, personal closing paragraph addressed to the patient by name. Acknowledge
   return prompt
 }
 
-export function buildMealSwapPrompt(currentMeal: Record<string, unknown>, mealType: string): string {
-  return `The user wants to swap their ${mealType}. The current meal is:
-${JSON.stringify(currentMeal, null, 2)}
+export function buildMealSwapPrompt(currentMeal: Record<string, unknown>, mealType: string, feedback?: string): string {
+  const feedbackBlock = feedback
+    ? `\n\nUSER FEEDBACK (address this above everything else): "${feedback}"\n`
+    : ''
 
-Generate 3 alternative meals that:
-1. Match similar macronutrient profile (within 15% of original calories/protein)
-2. Respect the user's allergies and restrictions (CRITICAL)
-3. Are appropriate for the time of day (${mealType})
-4. Offer variety from the original
+  return `The user wants to swap their ${mealType}. Current meal:
+${JSON.stringify(currentMeal, null, 2)}${feedbackBlock}
 
-Return ONLY valid JSON array of 3 meal objects with the same structure as a Meal object:
+Generate 3 alternative ${mealType} meals that:
+1. Match calorie/macro targets within 15% of the original
+2. STRICTLY respect all user allergies and dietary restrictions
+3. Are genuinely delicious and restaurant-quality — bold flavors, interesting textures
+4. Draw from the user's loved cuisines and taste profile
+5. Are appropriate for ${mealType} time
+${feedback ? `6. DIRECTLY address: "${feedback}"` : '6. Offer real variety from the original'}
+
+Return ONLY a valid JSON array of exactly 3 meal objects — no markdown, no backticks:
 [
-  { "id": "uuid", "name": "...", "description": "...", "reasoning": "...", "calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0, "fiber_g": 0, "ingredients": ["..."], "image_url": null, "image_prompt": "..." },
+  { "id": "uuid", "name": "...", "description": "appetizing menu-style description", "reasoning": "specific health reason", "calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0, "fiber_g": 0, "ingredients": ["1 cup ...", "2 tbsp ..."], "image_url": null, "image_prompt": "A hand-drawn watercolor illustration of [meal name], fine liner pen, Great British Baking Show recipe card style" },
   { "id": "uuid", "name": "...", "description": "...", "reasoning": "...", "calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0, "fiber_g": 0, "ingredients": ["..."], "image_url": null, "image_prompt": "..." },
   { "id": "uuid", "name": "...", "description": "...", "reasoning": "...", "calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0, "fiber_g": 0, "ingredients": ["..."], "image_url": null, "image_prompt": "..." }
 ]`

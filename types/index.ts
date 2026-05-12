@@ -16,6 +16,11 @@ export interface Meal {
   ingredients: string[]
   image_url: string | null
   image_prompt: string
+  // Optional — populated on demand when user opens the recipe card
+  instructions?: string[]
+  prep_time_mins?: number
+  cook_time_mins?: number
+  servings?: number
 }
 
 export interface DayMeals {

@@ -14,9 +14,10 @@ interface MealCardProps {
   logStatus?: MealLogStatus
   onSwap: (meal: Meal, mealType: string, day: string) => void
   onLog: (mealType: string, day: string, status: MealLogStatus) => void
+  onViewRecipe: (meal: Meal, mealType: string) => void
 }
 
-export function MealCard({ meal, mealType, day, logStatus, onSwap, onLog }: MealCardProps) {
+export function MealCard({ meal, mealType, day, logStatus, onSwap, onLog, onViewRecipe }: MealCardProps) {
   const [imageError, setImageError] = useState(false)
 
   const logButtons: { status: MealLogStatus; label: string }[] = [
@@ -50,8 +51,14 @@ export function MealCard({ meal, mealType, day, logStatus, onSwap, onLog }: Meal
       </div>
 
       <div className="p-4">
-        <h3 className="font-bold text-text-primary text-base mb-1">{meal.name}</h3>
-        <p className="text-text-secondary text-sm mb-3 line-clamp-2">{meal.description}</p>
+        <button
+          onClick={() => onViewRecipe(meal, mealType)}
+          className="text-left w-full group"
+        >
+          <h3 className="font-bold text-text-primary text-base mb-1 group-hover:text-accent-primary transition-colors">{meal.name}</h3>
+          <p className="text-text-secondary text-sm mb-1 line-clamp-2">{meal.description}</p>
+          <p className="text-xs text-accent-primary font-medium mb-2">View recipe →</p>
+        </button>
 
         {/* Reasoning */}
         <details className="mb-3">

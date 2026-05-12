@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { AppShell } from '@/components/layout/AppShell'
 import { MealCard } from '@/components/meal-plan/MealCard'
 import { SwapModal } from '@/components/meal-plan/SwapModal'
+import { RecipeModal } from '@/components/meal-plan/RecipeModal'
 import { Button } from '@/components/ui/Button'
 import { CardSkeleton } from '@/components/ui/Skeleton'
 import { useToast } from '@/components/ui/Toast'
@@ -48,6 +49,7 @@ export default function MealPlanPage() {
   const [generating, setGenerating] = useState(false)
   const [selectedDay, setSelectedDay] = useState<typeof DAYS[number]>('monday')
   const [swapModal, setSwapModal] = useState<{ meal: Meal; mealType: string; day: string } | null>(null)
+  const [recipeModal, setRecipeModal] = useState<{ meal: Meal; mealType: string } | null>(null)
   const [mealLog, setMealLog] = useState<Record<string, MealLogStatus>>({})
 
   useEffect(() => {
@@ -311,6 +313,7 @@ export default function MealPlanPage() {
                   logStatus={mealLog[logKey]}
                   onSwap={(m, mt, d) => setSwapModal({ meal: m, mealType: mt, day: d })}
                   onLog={handleLogMeal}
+                  onViewRecipe={(m, mt) => setRecipeModal({ meal: m, mealType: mt })}
                 />
               )
             })}
@@ -325,6 +328,14 @@ export default function MealPlanPage() {
           day={swapModal.day}
           onClose={() => setSwapModal(null)}
           onConfirm={handleSwapConfirm}
+        />
+      )}
+
+      {recipeModal && (
+        <RecipeModal
+          meal={recipeModal.meal}
+          mealType={recipeModal.mealType}
+          onClose={() => setRecipeModal(null)}
         />
       )}
     </AppShell>
