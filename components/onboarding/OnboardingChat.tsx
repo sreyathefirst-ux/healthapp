@@ -214,7 +214,7 @@ export function OnboardingChat() {
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/leaf-logo.png" alt="Vitalia" width={20} height={26} />
+              <img src="/leaf-logo.png" alt="Vitalia" width={21} height={22} />
               <span className="font-black text-sm tracking-[2px] uppercase text-text-primary">VITALIA</span>
             </div>
             <span className="text-sm text-text-secondary">Step {currentStep} of 7</span>
