@@ -44,11 +44,23 @@ const settingsOptions = [
   },
 ]
 
+function cmToFeetInches(cm: number): string {
+  const totalInches = cm / 2.54
+  const feet = Math.floor(totalInches / 12)
+  const inches = Math.round(totalInches % 12)
+  return `${feet}'${inches}"`
+}
+
+function kgToLbs(kg: number): string {
+  return (kg * 2.20462).toFixed(1)
+}
+
 export default function SettingsPage() {
   const router = useRouter()
   const [userName, setUserName] = useState('')
   const [age, setAge] = useState<number | null>(null)
-  const [weight, setWeight] = useState<number | null>(null)
+  const [heightCm, setHeightCm] = useState<number | null>(null)
+  const [weightKg, setWeightKg] = useState<number | null>(null)
   const [petName, setPetName] = useState('')
   const [petType, setPetType] = useState('')
 
@@ -59,13 +71,14 @@ export default function SettingsPage() {
       if (!user) return
 
       const [userRes, petRes] = await Promise.all([
-        supabase.from('users').select('name, age, weight_kg').eq('id', user.id).maybeSingle(),
+        supabase.from('users').select('name, age, height_cm, weight_kg').eq('id', user.id).maybeSingle(),
         supabase.from('pet').select('pet_name, pet_type').eq('user_id', user.id).maybeSingle(),
       ])
 
       setUserName(userRes.data?.name || '')
       setAge(userRes.data?.age ?? null)
-      setWeight(userRes.data?.weight_kg ?? null)
+      setHeightCm(userRes.data?.height_cm ?? null)
+      setWeightKg(userRes.data?.weight_kg ?? null)
       setPetName(petRes.data?.pet_name || '')
       setPetType(petRes.data?.pet_type || '')
     }
@@ -80,6 +93,8 @@ export default function SettingsPage() {
 
   const initial = userName ? userName[0].toUpperCase() : '?'
   const petEmoji = PET_EMOJI[petType?.toLowerCase()] ?? '🐾'
+  const heightDisplay = heightCm ? cmToFeetInches(heightCm) : null
+  const weightDisplay = weightKg ? `${kgToLbs(weightKg)} lbs` : null
 
   return (
     <AppShell>
@@ -103,8 +118,11 @@ export default function SettingsPage() {
                 {age !== null && (
                   <p className="text-slate-700 font-medium text-sm">Age: {age}</p>
                 )}
-                {weight !== null && (
-                  <p className="text-slate-700 font-medium text-sm">{weight} kg</p>
+                {heightDisplay && (
+                  <p className="text-slate-700 font-medium text-sm">Height: {heightDisplay}</p>
+                )}
+                {weightDisplay && (
+                  <p className="text-slate-700 font-medium text-sm">Weight: {weightDisplay}</p>
                 )}
                 {petName && (
                   <p className="text-slate-600 text-sm flex items-center gap-1.5">
