@@ -95,7 +95,7 @@ export function RoutineChecklist({ type }: RoutineChecklistProps) {
 
         <ProgressBar
           value={completion}
-          color={isMorning ? '#FFE4A0' : '#C9B8FF'}
+          color={isMorning ? '#A8D5BA' : '#D4C5E8'}
           className="mb-5"
         />
 
@@ -113,7 +113,7 @@ export function RoutineChecklist({ type }: RoutineChecklistProps) {
                     onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEdit() }}
                     autoFocus
                     placeholder="Item label..."
-                    className="flex-1 px-3 py-1.5 text-sm rounded-lg border border-gray-200 focus:outline-none focus:border-accent-primary"
+                    className="flex-1 px-3 py-1.5 text-sm rounded-lg border border-vitalia-border focus:outline-none focus:border-accent-primary"
                   />
                   <input
                     type="text"
@@ -121,7 +121,7 @@ export function RoutineChecklist({ type }: RoutineChecklistProps) {
                     onChange={(e) => setEditTime(e.target.value)}
                     onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEdit() }}
                     placeholder="7:00 AM"
-                    className="w-24 px-3 py-1.5 text-sm rounded-lg border border-gray-200 focus:outline-none focus:border-accent-primary"
+                    className="w-24 px-3 py-1.5 text-sm rounded-lg border border-vitalia-border focus:outline-none focus:border-accent-primary"
                   />
                   <button onClick={saveEdit} className="p-1.5 rounded-lg bg-accent-primary/20 hover:bg-accent-primary/30 text-text-primary transition-colors">
                     <Check size={14} />
@@ -137,7 +137,7 @@ export function RoutineChecklist({ type }: RoutineChecklistProps) {
               <div
                 key={item.id}
                 className="flex items-center gap-1 rounded-xl hover:bg-bg transition-colors group"
-                style={{ backgroundColor: checked ? 'rgba(201,184,255,0.08)' : undefined }}
+                style={{ backgroundColor: checked ? 'rgba(168,213,186,0.08)' : undefined }}
               >
                 <label className="flex items-center gap-3 p-3 flex-1 cursor-pointer">
                   <input
@@ -150,7 +150,7 @@ export function RoutineChecklist({ type }: RoutineChecklistProps) {
                     {item.label}
                   </span>
                   {item.time_target && (
-                    <span className="text-xs text-text-secondary bg-gray-100 px-2 py-0.5 rounded-full flex-shrink-0">
+                    <span className="text-xs text-text-secondary bg-accent-primary/10 px-2 py-0.5 rounded-full flex-shrink-0">
                       {item.time_target}
                     </span>
                   )}
@@ -177,7 +177,7 @@ export function RoutineChecklist({ type }: RoutineChecklistProps) {
         </div>
 
         {/* Add item UI */}
-        <div className="mt-3 pt-3 border-t border-gray-100">
+        <div className="mt-3 pt-3 border-t border-vitalia-border">
           {showAddForm ? (
             <div className="flex items-center gap-2">
               <input
@@ -187,7 +187,7 @@ export function RoutineChecklist({ type }: RoutineChecklistProps) {
                 onKeyDown={(e) => { if (e.key === 'Enter') handleAddItem(); if (e.key === 'Escape') setShowAddForm(false) }}
                 autoFocus
                 placeholder="New item..."
-                className="flex-1 px-3 py-1.5 text-sm rounded-lg border border-gray-200 focus:outline-none focus:border-accent-primary"
+                className="flex-1 px-3 py-1.5 text-sm rounded-lg border border-vitalia-border focus:outline-none focus:border-accent-primary"
               />
               <input
                 type="text"
@@ -195,7 +195,7 @@ export function RoutineChecklist({ type }: RoutineChecklistProps) {
                 onChange={(e) => setNewTime(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleAddItem(); if (e.key === 'Escape') setShowAddForm(false) }}
                 placeholder="7:00 AM"
-                className="w-24 px-3 py-1.5 text-sm rounded-lg border border-gray-200 focus:outline-none focus:border-accent-primary"
+                className="w-24 px-3 py-1.5 text-sm rounded-lg border border-vitalia-border focus:outline-none focus:border-accent-primary"
               />
               <button onClick={handleAddItem} className="p-1.5 rounded-lg bg-accent-primary/20 hover:bg-accent-primary/30 text-text-primary transition-colors">
                 <Check size={14} />
@@ -222,19 +222,19 @@ export function RoutineChecklist({ type }: RoutineChecklistProps) {
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.8 }}
-            className="bg-accent-sage/30 rounded-card p-6 text-center"
+            className="bg-accent-sage/20 border border-accent-sage/30 rounded-card p-6 text-center"
           >
             <div className="text-5xl mb-2">🎉</div>
-            <h3 className="font-bold text-green-700 text-lg">
+            <h3 className="font-bold text-accent-primary text-lg">
               {isMorning ? 'Morning complete!' : 'Night routine done!'}
             </h3>
-            <p className="text-green-600 text-sm mt-1">Amazing work! Your streak is growing 🔥</p>
+            <p className="text-text-secondary text-sm mt-1">Amazing work! Your streak is growing 🔥</p>
           </motion.div>
         )}
       </AnimatePresence>
 
       <Link href={otherHref} className="block">
-        <div className="bg-white rounded-card shadow-card p-4 text-center text-accent-primary text-sm font-medium hover:bg-accent-primary/5 transition-colors">
+        <div className="bg-white rounded-card shadow-card border border-accent-primary/15 p-4 text-center text-accent-primary text-sm font-medium hover:bg-accent-primary/5 transition-colors">
           {otherLabel}
         </div>
       </Link>

@@ -117,7 +117,7 @@ export default function OnboardingResultsPage() {
   return (
     <div className="min-h-screen bg-bg flex flex-col">
       {/* Header */}
-      <div className="bg-white border-b border-gray-100 px-4 py-4 flex-shrink-0">
+      <div className="bg-white border-b border-vitalia-border px-4 py-4 flex-shrink-0">
         <div className="max-w-2xl mx-auto">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
@@ -133,7 +133,7 @@ export default function OnboardingResultsPage() {
                 key={i}
                 onClick={() => go(i)}
                 className={`transition-all rounded-full ${
-                  i === slide ? 'w-6 h-2 bg-accent-primary' : 'w-2 h-2 bg-gray-200 hover:bg-gray-300'
+                  i === slide ? 'w-6 h-2 bg-accent-primary' : 'w-2 h-2 hover:opacity-70'
                 }`}
               />
             ))}
@@ -167,12 +167,12 @@ export default function OnboardingResultsPage() {
       </div>
 
       {/* Navigation bar */}
-      <div className="bg-white border-t border-gray-100 px-4 py-4 flex-shrink-0">
+      <div className="bg-white border-t border-vitalia-border px-4 py-4 flex-shrink-0">
         <div className="max-w-2xl mx-auto flex items-center justify-between gap-4">
           <button
             onClick={() => go(slide - 1)}
             disabled={slide === 0}
-            className="p-3 rounded-xl border border-gray-200 disabled:opacity-30 hover:bg-gray-50 transition-colors"
+            className="p-3 rounded-xl border border-vitalia-border disabled:opacity-30 hover:bg-bg transition-colors"
           >
             <ChevronLeft size={20} className="text-text-secondary" />
           </button>
@@ -180,7 +180,7 @@ export default function OnboardingResultsPage() {
           {slide < slides.length - 1 ? (
             <button
               onClick={() => go(slide + 1)}
-              className="flex-1 flex items-center justify-center gap-2 py-3 px-6 bg-accent-primary text-text-primary font-semibold rounded-xl hover:bg-accent-primary/90 transition-colors"
+              className="flex-1 flex items-center justify-center gap-2 py-3 px-6 bg-accent-primary text-white font-semibold rounded-btn hover:bg-accent-primary/90 transition-colors"
             >
               Next: {slides[slide + 1].label}
               <ChevronRight size={18} />
@@ -188,7 +188,7 @@ export default function OnboardingResultsPage() {
           ) : (
             <button
               onClick={() => router.push('/')}
-              className="flex-1 flex items-center justify-center gap-2 py-3 px-6 bg-text-primary text-white font-semibold rounded-xl hover:opacity-90 transition-opacity"
+              className="flex-1 flex items-center justify-center gap-2 py-3 px-6 bg-text-primary text-white font-semibold rounded-btn hover:opacity-90 transition-opacity"
             >
               Go to my dashboard
               <ArrowRight size={18} />
@@ -297,7 +297,7 @@ function MealPlanSlide({ plan, polling, onRefresh, refreshing }: { plan: MealPla
           <div key={day} className="bg-white rounded-card shadow-card p-4">
             <div className="flex items-center justify-between mb-3">
               <span className="font-semibold text-text-primary text-sm">{DAY_LABELS[day]}day</span>
-              <span className="text-xs text-text-secondary bg-gray-100 px-2 py-0.5 rounded-full">
+              <span className="text-xs text-text-secondary bg-bg px-2 py-0.5 rounded-full">
                 ~{totalCals} cal
               </span>
             </div>
@@ -308,7 +308,7 @@ function MealPlanSlide({ plan, polling, onRefresh, refreshing }: { plan: MealPla
                 { type: 'dinner', emoji: '🍽️', meal: meals.dinner },
                 { type: 'snack', emoji: '🍎', meal: meals.snack },
               ].map(({ type, emoji, meal }) => meal ? (
-                <div key={type} className="bg-gray-50 rounded-xl p-2.5">
+                <div key={type} className="bg-bg rounded-xl p-2.5">
                   <p className="text-xs text-text-secondary capitalize mb-0.5">{emoji} {type}</p>
                   <p className="text-xs font-medium text-text-primary leading-tight line-clamp-2">{meal.name}</p>
                   <p className="text-xs text-text-secondary mt-0.5">{meal.calories} cal · {meal.protein_g}g protein</p>
@@ -349,11 +349,11 @@ function WorkoutPlanSlide({ plan, polling, onRefresh, refreshing }: { plan: Work
             <div
               key={day}
               className={`rounded-card p-4 flex items-center gap-4 ${
-                isRest ? 'bg-gray-50' : 'bg-white shadow-card'
+                isRest ? 'bg-bg' : 'bg-white shadow-card'
               }`}
             >
               <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg flex-shrink-0 ${
-                isRest ? 'bg-gray-100' : 'bg-accent-primary/15'
+                isRest ? 'bg-bg' : 'bg-accent-primary/15'
               }`}>
                 {isRest ? '🧘' : '🏋️'}
               </div>
@@ -394,7 +394,7 @@ function RoutineSlide({ morningItems, nightItems, polling, onRefresh, refreshing
 
   return (
     <div className="space-y-6">
-      <div className="bg-gradient-to-br from-yellow-50 to-accent-primary/10 rounded-card p-4">
+      <div className="bg-gradient-to-br from-accent-yellow/40 to-accent-primary/10 rounded-card p-4">
         <p className="font-semibold text-text-primary text-sm">Your Daily Routine</p>
         <p className="text-text-secondary text-xs mt-0.5">Track these each day to keep your pet thriving and build your streak</p>
       </div>
@@ -409,7 +409,7 @@ function RoutineSlide({ morningItems, nightItems, polling, onRefresh, refreshing
           <div className="space-y-2">
             {morningItems.map((item, i) => (
               <div key={item.id || i} className="bg-white rounded-xl shadow-card p-3.5 flex items-center gap-3">
-                <div className="w-6 h-6 rounded-full border-2 border-gray-200 flex-shrink-0" />
+                <div className="w-6 h-6 rounded-full border-2 border-vitalia-border flex-shrink-0" />
                 <div>
                   <p className="text-sm font-medium text-text-primary">{item.label}</p>
                   {item.time_target && (
@@ -432,7 +432,7 @@ function RoutineSlide({ morningItems, nightItems, polling, onRefresh, refreshing
           <div className="space-y-2">
             {nightItems.map((item, i) => (
               <div key={item.id || i} className="bg-white rounded-xl shadow-card p-3.5 flex items-center gap-3">
-                <div className="w-6 h-6 rounded-full border-2 border-gray-200 flex-shrink-0" />
+                <div className="w-6 h-6 rounded-full border-2 border-vitalia-border flex-shrink-0" />
                 <div>
                   <p className="text-sm font-medium text-text-primary">{item.label}</p>
                   {item.time_target && (

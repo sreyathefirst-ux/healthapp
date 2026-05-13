@@ -10,11 +10,11 @@ import { PetState } from '@/types'
 import { Skeleton } from '@/components/ui/Skeleton'
 
 const stateColors: Record<PetState, string> = {
-  thriving: '#B8E4C9',
-  happy: '#C9B8FF',
-  neutral: '#FFE4A0',
-  sad: '#FFB5A0',
-  sick: '#FFB5A0',
+  thriving: '#A8D5BA',
+  happy: '#A8D5BA',
+  neutral: '#E8E6E3',
+  sad: '#D4C5E8',
+  sick: '#D4C5E8',
   critical: '#FF6B6B',
 }
 
@@ -78,6 +78,8 @@ export function PetWidget() {
   if (pet.current_streak >= 7) accessories.push('crown')
   if (pet.current_streak >= 30) accessories.push('sunglasses')
 
+  const stateColor = stateColors[petState]
+
   return (
     <Card className="relative overflow-hidden">
       <div className="flex items-center gap-6">
@@ -100,7 +102,7 @@ export function PetWidget() {
             <h3 className="font-bold text-lg text-text-primary">{pet.pet_name}</h3>
             <span
               className="text-xs font-medium px-2 py-0.5 rounded-full"
-              style={{ backgroundColor: stateColors[petState] + '40', color: stateColors[petState].replace(/40$/, '') }}
+              style={{ backgroundColor: stateColor + '33', color: petState === 'neutral' ? '#5D5D6D' : stateColor }}
             >
               {stateLabels[petState]}
             </span>
@@ -112,7 +114,7 @@ export function PetWidget() {
           </p>
           <ProgressBar
             value={avgCompletion}
-            color={stateColors[petState]}
+            color={stateColor}
             showLabel
           />
           <p className="text-xs text-text-secondary mt-1">7-day average completion</p>
@@ -126,7 +128,7 @@ export function PetWidget() {
             initial={{ opacity: 0, y: 10, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.9 }}
-            className="absolute top-4 left-28 right-4 bg-white rounded-2xl shadow-card p-3 border border-accent-primary/20 text-sm z-10"
+            className="absolute top-4 left-28 right-4 bg-white rounded-2xl shadow-card border border-accent-primary/20 p-3 text-sm z-10"
           >
             <div className="absolute left-[-8px] top-4 w-0 h-0 border-t-8 border-t-transparent border-r-8 border-r-white border-b-8 border-b-transparent" />
             {speechBubble}

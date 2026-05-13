@@ -4,17 +4,19 @@
 @tailwind utilities;
 
 :root {
-  --bg: #F5F0FF;
+  --bg: #F9F8F6;
   --card: #FFFFFF;
-  --accent-primary: #C9B8FF;
-  --accent-coral: #FFB5A0;
-  --accent-sage: #B8E4C9;
-  --accent-yellow: #FFE4A0;
+  --accent-primary: #A8D5BA;
+  --accent-coral: #D4C5E8;
+  --accent-sage: #A8D5BA;
+  --accent-yellow: #FAF8F4;
   --text-primary: #1A1A2E;
-  --text-secondary: #6B6B8A;
+  --text-secondary: #5D5D6D;
+  --color-border: #E8E6E3;
   --radius-card: 20px;
-  --radius-btn: 999px;
-  --shadow: 0px 4px 20px rgba(0,0,0,0.06);
+  --radius-btn: 10px;
+  --radius-pill: 999px;
+  --shadow: 0px 4px 16px rgba(0,0,0,0.05);
 }
 
 * {
@@ -42,42 +44,48 @@ a {
     background: var(--card);
     border-radius: var(--radius-card);
     box-shadow: var(--shadow);
+    border: 1px solid rgba(168, 213, 186, 0.15);
     padding: 20px;
   }
 
   .btn-primary {
     border-radius: var(--radius-btn);
-    background: var(--accent-primary);
-    color: var(--text-primary);
-    font-weight: 600;
+    background: linear-gradient(135deg, #A8D5BA 0%, #9AC5AB 100%);
+    color: white;
+    font-weight: 700;
     padding: 12px 28px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: opacity 0.2s;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 16px rgba(168, 213, 186, 0.2);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
   }
 
   .btn-primary:hover {
-    opacity: 0.9;
+    background: linear-gradient(135deg, #98CBAA 0%, #88B99B 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(168, 213, 186, 0.3);
   }
 
   .btn-secondary {
-    border-radius: 12px;
+    border-radius: var(--radius-btn);
     border: 1.5px solid var(--accent-primary);
     background: transparent;
-    color: var(--text-primary);
+    color: var(--accent-primary);
     font-weight: 500;
     padding: 10px 24px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: background 0.2s;
+    transition: all 0.3s ease;
   }
 
   .btn-secondary:hover {
-    background: rgba(201, 184, 255, 0.1);
+    background: rgba(168, 213, 186, 0.1);
   }
 }
 
@@ -96,14 +104,41 @@ a {
   transition: background 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
 }
 
-.btn-vitalia:hover {
+.btn-vitalia:hover:not(:disabled) {
   background: linear-gradient(135deg, #98CBAA 0%, #88B99B 100%);
   transform: translateY(-2px);
   box-shadow: 0 8px 24px rgba(168, 213, 186, 0.3);
 }
 
-.btn-vitalia:active {
-  transform: translateY(0);
+.btn-vitalia:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ── Form inputs ────────────────────────────────────────────────── */
+
+.vitalia-input {
+  padding: 12px 14px;
+  background: white;
+  border: 1.5px solid #E8E6E3;
+  border-radius: 10px;
+  font-size: 14px;
+  font-family: 'DM Sans', sans-serif;
+  color: #1A1A2E;
+  width: 100%;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.vitalia-input::placeholder {
+  color: #D4C4D0;
+}
+
+.vitalia-input:focus {
+  outline: none;
+  border-color: #A8D5BA;
+  background: #FAFAF8;
+  box-shadow: 0 0 0 3px rgba(168, 213, 186, 0.1);
 }
 
 /* ── Keyframes ─────────────────────────────────────────────────── */
@@ -133,7 +168,12 @@ a {
   50% { transform: translateY(-10px); }
 }
 
-/* ── Animation utility classes ─────────────────────────────────── */
+@keyframes skeletonShimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* ── Animation classes ─────────────────────────────────────────── */
 
 .animate-breathe {
   animation: breathe 4s ease-in-out infinite;
@@ -159,27 +199,8 @@ a {
   animation: scrollBounce 3s ease-in-out infinite 3s;
 }
 
-/* ── Vitalia form inputs ────────────────────────────────────────── */
-
-.vitalia-input {
-  padding: 12px 14px;
-  background: white;
-  border: 1.5px solid #E8E6E3;
-  border-radius: 10px;
-  font-size: 14px;
-  font-family: 'DM Sans', sans-serif;
-  color: #2D2D3D;
-  width: 100%;
-  transition: border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-.vitalia-input::placeholder {
-  color: #D4C4D0;
-}
-
-.vitalia-input:focus {
-  outline: none;
-  border-color: #A8D5BA;
-  background: #FAFAF8;
-  box-shadow: 0 0 0 3px rgba(168, 213, 186, 0.1);
+.skeleton-shimmer {
+  background: linear-gradient(90deg, #F3F8F5 25%, #E8F3EE 50%, #F3F8F5 75%);
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.5s infinite;
 }

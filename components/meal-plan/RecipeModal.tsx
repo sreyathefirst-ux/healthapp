@@ -61,16 +61,16 @@ export function RecipeModal({ meal, mealType, onClose }: RecipeModalProps) {
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 40 }}
         transition={{ duration: 0.25 }}
-        className="bg-white rounded-t-3xl sm:rounded-card shadow-2xl w-full sm:max-w-xl max-h-[92vh] overflow-y-auto"
+        className="bg-white rounded-t-3xl sm:rounded-[24px] shadow-[0_20px_60px_rgba(0,0,0,0.1)] w-full sm:max-w-xl max-h-[92vh] overflow-y-auto"
       >
         {/* Header image */}
-        <div className="relative h-48 bg-gradient-to-br from-accent-primary/15 to-accent-sage/25 flex-shrink-0">
+        <div className="relative h-48 bg-gradient-to-br from-accent-primary/15 to-accent-coral/20 flex-shrink-0">
           {meal.image_url && !imageError ? (
             <Image
               src={meal.image_url}
               alt={meal.name}
               fill
-              className="object-cover rounded-t-3xl sm:rounded-t-card"
+              className="object-cover rounded-t-3xl sm:rounded-t-[24px]"
               onError={() => setImageError(true)}
             />
           ) : (
@@ -106,18 +106,18 @@ export function RecipeModal({ meal, mealType, onClose }: RecipeModalProps) {
           </div>
 
           {/* Why this meal */}
-          <div className="bg-accent-primary/8 rounded-xl p-4">
+          <div className="bg-accent-primary/8 rounded-xl p-4" style={{ backgroundColor: 'rgba(168,213,186,0.08)' }}>
             <p className="text-xs font-semibold text-accent-primary uppercase tracking-wide mb-1">Why this meal</p>
             <p className="text-sm text-text-secondary leading-relaxed">{meal.reasoning}</p>
           </div>
 
           {/* Recipe section */}
           {loading ? (
-            <div className="space-y-3 animate-pulse">
-              <div className="h-5 bg-gray-200 rounded w-1/3" />
-              <div className="h-3 bg-gray-100 rounded" />
-              <div className="h-3 bg-gray-100 rounded w-4/5" />
-              <div className="h-3 bg-gray-100 rounded w-3/5" />
+            <div className="space-y-3">
+              <div className="h-5 skeleton-shimmer rounded w-1/3" />
+              <div className="h-3 skeleton-shimmer rounded" />
+              <div className="h-3 skeleton-shimmer rounded w-4/5" />
+              <div className="h-3 skeleton-shimmer rounded w-3/5" />
               <p className="text-center text-xs text-text-secondary pt-2">Generating recipe...</p>
             </div>
           ) : error ? (
@@ -136,21 +136,21 @@ export function RecipeModal({ meal, mealType, onClose }: RecipeModalProps) {
             <>
               {/* Time + servings row */}
               <div className="flex gap-3">
-                <div className="flex-1 bg-gray-50 rounded-xl p-3 flex items-center gap-2">
+                <div className="flex-1 bg-bg rounded-xl p-3 flex items-center gap-2">
                   <Clock size={16} className="text-accent-primary flex-shrink-0" />
                   <div>
                     <p className="text-xs text-text-secondary">Prep</p>
                     <p className="text-sm font-semibold text-text-primary">{recipe.prep_time_mins} min</p>
                   </div>
                 </div>
-                <div className="flex-1 bg-gray-50 rounded-xl p-3 flex items-center gap-2">
+                <div className="flex-1 bg-bg rounded-xl p-3 flex items-center gap-2">
                   <ChefHat size={16} className="text-accent-primary flex-shrink-0" />
                   <div>
                     <p className="text-xs text-text-secondary">Cook</p>
                     <p className="text-sm font-semibold text-text-primary">{recipe.cook_time_mins} min</p>
                   </div>
                 </div>
-                <div className="flex-1 bg-gray-50 rounded-xl p-3 flex items-center gap-2">
+                <div className="flex-1 bg-bg rounded-xl p-3 flex items-center gap-2">
                   <Users size={16} className="text-accent-primary flex-shrink-0" />
                   <div>
                     <p className="text-xs text-text-secondary">Serves</p>

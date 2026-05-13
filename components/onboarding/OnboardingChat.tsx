@@ -97,7 +97,6 @@ export function OnboardingChat() {
 
       console.log('[OnboardingChat] messages state after stream:', messages.length + 2, 'total')
 
-      // Check for step complete marker
       const stepCompleteMatch = assistantText.match(/<step_complete>([\s\S]*?)<\/step_complete>/)
       if (stepCompleteMatch) {
         try {
@@ -105,7 +104,6 @@ export function OnboardingChat() {
           const nextStep = (stepData.step + 1) as OnboardingStep
           console.log('[OnboardingChat] step_complete detected — advancing to step', nextStep)
 
-          // Clean the assistant message (remove the step_complete block)
           const cleanText = assistantText.replace(/<step_complete>[\s\S]*?<\/step_complete>/g, '').trim()
           setMessages((prev) => {
             const updated = [...prev]
@@ -134,7 +132,7 @@ export function OnboardingChat() {
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
-    e.target.value = '' // allow re-selecting same file
+    e.target.value = ''
 
     setUploadingFile(true)
     setMessages((prev) => [
@@ -211,12 +209,21 @@ export function OnboardingChat() {
   return (
     <div className="flex flex-col h-screen bg-bg">
       {/* Progress header */}
-      <div className="bg-white border-b border-gray-100 px-4 py-4">
+      <div className="bg-white border-b border-vitalia-border px-4 py-4">
         <div className="max-w-2xl mx-auto">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <span className="text-xl">🌿</span>
-              <span className="font-semibold text-text-primary">Vitalia</span>
+              <svg viewBox="0 0 100 130" width="20" height="26">
+                <defs>
+                  <linearGradient id="chatLeafGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style={{ stopColor: '#6FD8A0', stopOpacity: 1 }} />
+                    <stop offset="100%" style={{ stopColor: '#B48FE8', stopOpacity: 1 }} />
+                  </linearGradient>
+                </defs>
+                <path d="M 50 5 Q 78 18 85 48 Q 88 75 75 108 Q 50 128 50 128 Q 50 128 25 108 Q 12 75 15 48 Q 22 18 50 5 Z" fill="url(#chatLeafGrad)" />
+                <path d="M 50 10 Q 51 38 50 70 Q 49 100 50 128" fill="none" stroke="white" strokeWidth="4" strokeLinecap="round" opacity="0.9" />
+              </svg>
+              <span className="font-script text-xl text-vitalia-gradient">Vitalia</span>
             </div>
             <span className="text-sm text-text-secondary">Step {currentStep} of 7</span>
           </div>
@@ -224,7 +231,8 @@ export function OnboardingChat() {
             {STEP_LABELS.map((label, i) => (
               <div
                 key={i}
-                className={`flex-1 h-1.5 rounded-full transition-all ${i < currentStep ? 'bg-accent-primary' : 'bg-gray-200'}`}
+                className="flex-1 h-1.5 rounded-full transition-all"
+                style={{ backgroundColor: i < currentStep ? '#A8D5BA' : '#E8E6E3' }}
                 title={label}
               />
             ))}
@@ -283,7 +291,7 @@ export function OnboardingChat() {
       )}
 
       {/* Input */}
-      <div className="bg-white border-t border-gray-100 px-4 py-4">
+      <div className="bg-white border-t border-vitalia-border px-4 py-4">
         <div className="max-w-2xl mx-auto flex gap-3">
           <input
             type="text"
@@ -292,7 +300,7 @@ export function OnboardingChat() {
             onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
             placeholder="Type your message..."
             disabled={isLoading || currentStep === 2}
-            className="flex-1 px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-accent-primary text-sm disabled:opacity-50"
+            className="flex-1 px-4 py-3 rounded-xl border-[1.5px] border-vitalia-border focus:outline-none focus:border-accent-primary text-sm disabled:opacity-50 bg-white transition-colors"
           />
           <Button
             onClick={sendMessage}

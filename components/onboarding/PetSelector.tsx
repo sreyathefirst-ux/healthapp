@@ -100,22 +100,14 @@ export function PetSelector() {
   }
 
   async function runGeneration(tasksToRun: Task[]) {
-    // Mark all tasks-to-run as running (except 'night' which shares the routine call)
     const activeKeys = new Set(tasksToRun.map((t) => t.key))
-
-    // Deduplicate: morning and night share one API call
     const apiCalls: { keys: string[]; endpoint: string }[] = []
-    let routineTask: Task | undefined
 
     for (const task of tasksToRun) {
       if (task.key === 'morning') {
-        routineTask = task
-        // night will be bundled with morning
         apiCalls.push({ keys: ['morning', 'night'], endpoint: '/api/plans/routine' })
       } else if (task.key === 'night') {
-        // handled with morning above — skip if morning is also in the list
         if (!activeKeys.has('morning')) {
-          // night retrying alone — still call routine endpoint
           apiCalls.push({ keys: ['morning', 'night'], endpoint: '/api/plans/routine' })
         }
       } else {
@@ -123,7 +115,6 @@ export function PetSelector() {
       }
     }
 
-    // Mark tasks as running
     setTasks((prev) => prev.map((t) =>
       activeKeys.has(t.key) ? { ...t, status: 'running' } : t
     ))
@@ -152,7 +143,6 @@ export function PetSelector() {
 
     await supabase.from('users').update({ onboarding_complete: true }).eq('id', user.id)
 
-    // Request push notification permission (non-blocking)
     if ('Notification' in window && 'serviceWorker' in navigator) {
       Notification.requestPermission().then(async (permission) => {
         if (permission === 'granted') {
@@ -179,7 +169,6 @@ export function PetSelector() {
 
     await runGeneration(initialTasks)
 
-    // Check final state
     setTasks((prev) => {
       const errors = prev.filter((t) => t.status === 'error')
       if (errors.length === 0) {
@@ -191,7 +180,6 @@ export function PetSelector() {
     })
   }
 
-  // Navigate once allDone flips true
   useEffect(() => {
     if (allDone) {
       const t = setTimeout(() => router.push('/onboarding/results'), 800)
@@ -224,8 +212,6 @@ export function PetSelector() {
     return (
       <div className="min-h-screen bg-bg flex flex-col items-center justify-center px-4 py-12">
         <div className="w-full max-w-sm space-y-8">
-
-          {/* Pet animation */}
           <div className="flex justify-center">
             <motion.div
               animate={
@@ -248,26 +234,15 @@ export function PetSelector() {
             </motion.div>
           </div>
 
-          {/* Status text */}
           <div className="text-center">
             <AnimatePresence mode="wait">
               {allDone ? (
-                <motion.div
-                  key="done"
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="space-y-1"
-                >
+                <motion.div key="done" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-1">
                   <h2 className="text-2xl font-bold text-text-primary">Your plan is ready! 🎉</h2>
                   <p className="text-text-secondary text-sm">Taking you to your results...</p>
                 </motion.div>
               ) : hasErrors ? (
-                <motion.div
-                  key="error"
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="space-y-1"
-                >
+                <motion.div key="error" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-1">
                   <h2 className="text-xl font-bold text-text-primary">Some items failed</h2>
                   <p className="text-text-secondary text-sm">
                     {tasks.filter((t) => t.status === 'error').length} item
@@ -290,11 +265,11 @@ export function PetSelector() {
             </AnimatePresence>
           </div>
 
-          {/* Progress bar */}
           {!hasErrors && (
-            <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+            <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: '#E8E6E3' }}>
               <motion.div
-                className="h-full bg-accent-primary rounded-full"
+                className="h-full rounded-full"
+                style={{ backgroundColor: '#A8D5BA' }}
                 initial={{ width: '0%' }}
                 animate={{ width: `${(doneCount / tasks.length) * 100}%` }}
                 transition={{ duration: 0.5, ease: 'easeOut' }}
@@ -302,24 +277,24 @@ export function PetSelector() {
             </div>
           )}
 
-          {/* Task list */}
           <div className="space-y-2">
             {tasks.map((task) => (
               <div
                 key={task.key}
                 className={`flex items-center gap-3 p-3 rounded-xl transition-all ${
                   task.status === 'done'
-                    ? 'bg-accent-sage/20'
+                    ? 'bg-accent-sage/15 border border-accent-sage/25'
                     : task.status === 'error'
-                    ? 'bg-red-50'
+                    ? 'bg-red-50 border border-red-100'
                     : task.status === 'running'
-                    ? 'bg-accent-primary/10'
-                    : 'bg-white'
+                    ? 'bg-accent-primary/8 border border-accent-primary/15'
+                    : 'bg-white border border-vitalia-border'
                 }`}
+                style={task.status === 'running' ? { backgroundColor: 'rgba(168,213,186,0.08)' } : undefined}
               >
                 <span className="text-xl w-8 text-center flex-shrink-0">{task.emoji}</span>
                 <span className={`flex-1 text-sm font-medium ${
-                  task.status === 'done' ? 'text-green-700' :
+                  task.status === 'done' ? 'text-accent-primary' :
                   task.status === 'error' ? 'text-red-600' :
                   'text-text-primary'
                 }`}>
@@ -328,7 +303,7 @@ export function PetSelector() {
                 <div className="flex-shrink-0 w-6 h-6 flex items-center justify-center">
                   {task.status === 'done' && (
                     <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 300 }}>
-                      <Check size={16} className="text-green-600" />
+                      <Check size={16} className="text-accent-primary" />
                     </motion.div>
                   )}
                   {task.status === 'error' && <X size={16} className="text-red-500" />}
@@ -336,14 +311,13 @@ export function PetSelector() {
                     <Loader2 size={16} className="text-accent-primary animate-spin" />
                   )}
                   {task.status === 'pending' && (
-                    <div className="w-3 h-3 rounded-full bg-gray-200" />
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#E8E6E3' }} />
                   )}
                 </div>
               </div>
             ))}
           </div>
 
-          {/* Retry button — only shown when there are errors */}
           {hasErrors && (
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
               <Button onClick={handleRetryFailed} className="w-full">
@@ -355,7 +329,6 @@ export function PetSelector() {
               </p>
             </motion.div>
           )}
-
         </div>
       </div>
     )
@@ -376,10 +349,10 @@ export function PetSelector() {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => setSelectedPet(pet.type)}
-              className={`p-6 rounded-card text-left transition-all ${
+              className={`p-6 rounded-card text-left transition-all border-2 ${
                 selectedPet === pet.type
-                  ? 'bg-accent-primary/20 border-2 border-accent-primary shadow-card'
-                  : 'bg-white border-2 border-transparent shadow-card hover:border-accent-primary/40'
+                  ? 'bg-accent-primary/10 border-accent-primary shadow-card'
+                  : 'bg-white border-vitalia-border shadow-card hover:border-accent-primary/40'
               }`}
             >
               <div className="text-5xl mb-3">{pet.emoji}</div>
@@ -393,10 +366,10 @@ export function PetSelector() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-card shadow-card p-6 space-y-4"
+            className="bg-white rounded-card shadow-card border border-accent-primary/15 p-6 space-y-4"
           >
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-2">
+              <label className="block text-[11px] font-bold uppercase tracking-[0.5px] mb-2" style={{ color: '#A8D5BA' }}>
                 What will you name your {pets.find((p) => p.type === selectedPet)?.emoji}?
               </label>
               <input
@@ -406,7 +379,7 @@ export function PetSelector() {
                 onKeyDown={(e) => e.key === 'Enter' && !loading && petName.trim() && handleMeetPet()}
                 placeholder="Enter a name..."
                 maxLength={20}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-accent-primary text-sm"
+                className="w-full px-4 py-3 rounded-xl border-[1.5px] border-vitalia-border focus:outline-none focus:border-accent-primary text-sm transition-colors"
               />
             </div>
             <Button

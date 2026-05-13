@@ -10,7 +10,7 @@ export function Skeleton({ className = '', lines }: SkeletonProps) {
         {Array.from({ length: lines }).map((_, i) => (
           <div
             key={i}
-            className={`animate-pulse bg-gray-200 rounded-lg h-4 ${i === lines - 1 ? 'w-3/4' : 'w-full'}`}
+            className={`skeleton-shimmer rounded-lg h-4 ${i === lines - 1 ? 'w-3/4' : 'w-full'}`}
           />
         ))}
       </div>
@@ -18,13 +18,13 @@ export function Skeleton({ className = '', lines }: SkeletonProps) {
   }
 
   return (
-    <div className={`animate-pulse bg-gray-200 rounded-xl ${className}`} />
+    <div className={`skeleton-shimmer rounded-xl ${className}`} />
   )
 }
 
 export function CardSkeleton() {
   return (
-    <div className="bg-white rounded-card shadow-card p-5 space-y-4">
+    <div className="bg-white rounded-card shadow-card border border-accent-primary/15 p-5 space-y-4">
       <Skeleton className="h-6 w-1/3" />
       <Skeleton lines={3} />
       <div className="flex gap-2">

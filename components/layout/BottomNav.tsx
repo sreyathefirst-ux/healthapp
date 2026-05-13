@@ -15,7 +15,7 @@ export function BottomNav() {
   const pathname = usePathname()
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-40 safe-area-pb">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-vitalia-border z-40 safe-area-pb">
       <div className="flex items-center justify-around px-4 py-2">
         {navItems.map(({ href, emoji, label }) => {
           const isActive = href === '/' ? pathname === '/' : pathname.startsWith(href)
@@ -24,11 +24,14 @@ export function BottomNav() {
               key={href}
               href={href}
               className={`flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-colors ${
-                isActive ? 'text-accent-primary' : 'text-text-secondary'
+                isActive ? 'text-accent-primary' : 'text-vitalia-muted'
               }`}
             >
               <span className="text-2xl">{emoji}</span>
               <span className="text-xs font-medium">{label}</span>
+              {isActive && (
+                <span className="w-1 h-1 rounded-full bg-accent-primary -mt-0.5" />
+              )}
             </Link>
           )
         })}

@@ -35,9 +35,9 @@ export function MealCard({ meal, mealType, day, logStatus, onSwap, onLog, onView
   ]
 
   return (
-    <div className="bg-white rounded-card shadow-card overflow-hidden">
+    <div className="bg-white rounded-card shadow-card border border-accent-primary/15 overflow-hidden">
       {/* Meal image */}
-      <div className="h-40 bg-gradient-to-br from-accent-primary/10 to-accent-sage/20 relative">
+      <div className="h-40 bg-gradient-to-br from-accent-primary/10 to-accent-coral/15 relative">
         {meal.image_url && !imageError ? (
           <Image
             src={meal.image_url}
@@ -96,7 +96,7 @@ export function MealCard({ meal, mealType, day, logStatus, onSwap, onLog, onView
                 className={`w-9 h-9 rounded-xl text-lg transition-all ${
                   logStatus === status
                     ? 'bg-accent-primary/20 ring-2 ring-accent-primary'
-                    : 'hover:bg-gray-100'
+                    : 'hover:bg-bg'
                 }`}
                 title={status || ''}
               >
@@ -108,7 +108,7 @@ export function MealCard({ meal, mealType, day, logStatus, onSwap, onLog, onView
             variant="ghost"
             size="sm"
             onClick={() => onSwap(meal, mealType, day)}
-            className="text-text-secondary"
+            className="text-vitalia-muted"
           >
             <RefreshCw size={14} />
             Swap

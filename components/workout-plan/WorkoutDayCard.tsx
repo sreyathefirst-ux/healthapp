@@ -100,35 +100,35 @@ export function WorkoutDayCard({ workout, day, logStatus, onSwap, onLog, onUpdat
 
   return (
     <div className="bg-white rounded-card shadow-card overflow-hidden">
-      <div className="p-5 border-b border-gray-100">
+      <div className="p-5 border-b border-vitalia-border">
         <div className="flex items-start justify-between mb-3">
           <h3 className="font-bold text-text-primary text-lg">{workout.workout_name}</h3>
           {onUpdate && (
             <div className="relative">
               <button
                 onClick={() => setShowTypeMenu(!showTypeMenu)}
-                className="flex items-center gap-1 text-xs text-text-secondary hover:text-text-primary px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors"
+                className="flex items-center gap-1 text-xs text-text-secondary hover:text-text-primary px-2 py-1 rounded-lg hover:bg-bg transition-colors"
               >
                 Edit <ChevronDown size={12} />
               </button>
               {showTypeMenu && (
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setShowTypeMenu(false)} />
-                  <div className="absolute right-0 top-full mt-1 bg-white rounded-xl shadow-card border border-gray-100 z-20 min-w-[160px]">
+                  <div className="absolute right-0 top-full mt-1 bg-white rounded-xl shadow-card border border-vitalia-border z-20 min-w-[160px]">
                     <button
                       onClick={() => handleChangeType('rest')}
                       className="block w-full text-left px-3 py-2 text-sm hover:bg-bg transition-colors rounded-t-xl text-text-primary"
                     >
                       🛌 Make rest day
                     </button>
-                    <div className="border-t border-gray-100 px-3 py-2">
+                    <div className="border-t border-vitalia-border px-3 py-2">
                       <p className="text-xs text-text-secondary font-medium mb-1.5">Location</p>
                       <div className="flex flex-col gap-1">
                         {LOCATION_OPTIONS.map((loc) => (
                           <button
                             key={loc}
                             onClick={() => handleChangeLocation(loc)}
-                            className={`text-xs px-2 py-1.5 rounded-lg transition-colors text-left ${workout.location === loc ? 'bg-accent-primary/20 text-text-primary font-medium' : 'hover:bg-gray-100 text-text-secondary'}`}
+                            className={`text-xs px-2 py-1.5 rounded-lg transition-colors text-left ${workout.location === loc ? 'bg-accent-primary/20 text-text-primary font-medium' : 'hover:bg-bg text-text-secondary'}`}
                           >
                             {locationEmoji[loc]} {loc.charAt(0).toUpperCase() + loc.slice(1)}
                           </button>
@@ -167,7 +167,7 @@ export function WorkoutDayCard({ workout, day, logStatus, onSwap, onLog, onUpdat
                 onKeyDown={(e) => e.key === 'Enter' && handleAddExercise()}
                 autoFocus
                 placeholder="Exercise name (e.g. Hip Thrust)"
-                className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 focus:outline-none focus:border-accent-primary"
+                className="w-full px-3 py-2 text-sm rounded-lg border border-vitalia-border focus:outline-none focus:border-accent-primary"
               />
               <div className="flex gap-2">
                 {[
@@ -178,7 +178,7 @@ export function WorkoutDayCard({ workout, day, logStatus, onSwap, onLog, onUpdat
                   <div key={label} className="flex-1">
                     <label className="text-xs text-text-secondary block mb-0.5">{label}</label>
                     <input type="number" value={val} onChange={(e) => set(e.target.value)} min={0}
-                      className="w-full px-2 py-1.5 text-sm rounded-lg border border-gray-200 focus:outline-none focus:border-accent-primary" />
+                      className="w-full px-2 py-1.5 text-sm rounded-lg border border-vitalia-border focus:outline-none focus:border-accent-primary" />
                   </div>
                 ))}
               </div>
@@ -186,7 +186,7 @@ export function WorkoutDayCard({ workout, day, logStatus, onSwap, onLog, onUpdat
                 <button onClick={handleAddExercise} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-accent-primary/20 hover:bg-accent-primary/30 text-sm font-medium text-text-primary transition-colors">
                   <Check size={13} /> Add
                 </button>
-                <button onClick={() => setShowAddExercise(false)} className="flex items-center gap-1 px-3 py-1.5 rounded-lg hover:bg-gray-100 text-sm text-text-secondary transition-colors">
+                <button onClick={() => setShowAddExercise(false)} className="flex items-center gap-1 px-3 py-1.5 rounded-lg hover:bg-bg text-sm text-text-secondary transition-colors">
                   <X size={13} /> Cancel
                 </button>
               </div>
@@ -202,13 +202,13 @@ export function WorkoutDayCard({ workout, day, logStatus, onSwap, onLog, onUpdat
         )}
       </div>
 
-      <div className="p-5 border-t border-gray-100 flex items-center justify-between">
+      <div className="p-5 border-t border-vitalia-border flex items-center justify-between">
         <div className="flex gap-1">
           {logButtons.map(({ status, label, title }) => (
             <button
               key={status}
               onClick={() => onLog(day, logStatus === status ? null : status)}
-              className={`w-10 h-10 rounded-xl text-lg transition-all ${logStatus === status ? 'bg-accent-primary/20 ring-2 ring-accent-primary' : 'hover:bg-gray-100'}`}
+              className={`w-10 h-10 rounded-xl text-lg transition-all ${logStatus === status ? 'bg-accent-primary/20 ring-2 ring-accent-primary' : 'hover:bg-bg'}`}
               title={title}
             >
               {label}

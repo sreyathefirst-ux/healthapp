@@ -18,9 +18,9 @@ interface ToastContextValue {
 const ToastContext = createContext<ToastContextValue>({ toast: () => {} })
 
 const variantStyles: Record<ToastVariant, string> = {
-  success: 'bg-accent-sage text-green-800 border-green-300',
-  error: 'bg-accent-coral/20 text-red-700 border-red-300',
-  info: 'bg-accent-primary/20 text-text-primary border-accent-primary/40',
+  success: 'bg-accent-sage/20 text-text-primary border-accent-sage/40',
+  error: 'bg-red-50 text-red-700 border-red-200',
+  info: 'bg-accent-primary/10 text-text-primary border-accent-primary/30',
 }
 
 const variantIcons: Record<ToastVariant, string> = {

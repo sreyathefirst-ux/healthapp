@@ -47,9 +47,9 @@ export function ExerciseItem({ exercise }: ExerciseItemProps) {
           </div>
         </div>
 
-        <div className="w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
+        <div className="w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden bg-bg flex items-center justify-center">
           {gifLoading ? (
-            <div className="animate-pulse w-full h-full bg-gray-200" />
+            <div className="skeleton-shimmer w-full h-full" />
           ) : gifUrl && !gifError ? (
             <img
               src={gifUrl}

@@ -80,7 +80,7 @@ function RoutineEditor({
                     onChange={(e) => setEditLabel(e.target.value)}
                     onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') setEditingId(null) }}
                     autoFocus
-                    className="flex-1 px-3 py-1.5 text-sm rounded-lg border border-gray-200 focus:outline-none focus:border-accent-primary"
+                    className="flex-1 px-3 py-1.5 text-sm rounded-lg border-[1.5px] border-vitalia-border focus:outline-none focus:border-accent-primary"
                   />
                   <input
                     type="text"
@@ -88,12 +88,12 @@ function RoutineEditor({
                     onChange={(e) => setEditTime(e.target.value)}
                     onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') setEditingId(null) }}
                     placeholder="7:00 AM"
-                    className="w-24 px-3 py-1.5 text-sm rounded-lg border border-gray-200 focus:outline-none focus:border-accent-primary"
+                    className="w-24 px-3 py-1.5 text-sm rounded-lg border-[1.5px] border-vitalia-border focus:outline-none focus:border-accent-primary"
                   />
                   <button onClick={saveEdit} className="p-1.5 rounded-lg bg-accent-primary/20 hover:bg-accent-primary/30 transition-colors">
                     <Check size={14} />
                   </button>
-                  <button onClick={() => setEditingId(null)} className="p-1.5 rounded-lg hover:bg-gray-100 text-text-secondary transition-colors">
+                  <button onClick={() => setEditingId(null)} className="p-1.5 rounded-lg hover:bg-bg text-text-secondary transition-colors">
                     <X size={14} />
                   </button>
                 </div>
@@ -133,7 +133,7 @@ function RoutineEditor({
           onChange={(e) => setNewLabel(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && addItem()}
           placeholder="Add new item..."
-          className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:border-accent-primary text-sm"
+          className="flex-1 px-4 py-2.5 rounded-xl border-[1.5px] border-vitalia-border focus:outline-none focus:border-accent-primary text-sm"
         />
         <input
           type="text"
@@ -141,7 +141,7 @@ function RoutineEditor({
           onChange={(e) => setNewTime(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && addItem()}
           placeholder="7:00 AM"
-          className="w-24 px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:border-accent-primary text-sm"
+          className="w-24 px-3 py-2.5 rounded-xl border-[1.5px] border-vitalia-border focus:outline-none focus:border-accent-primary text-sm"
         />
         <button
           onClick={addItem}

@@ -118,7 +118,7 @@ export default function NotificationsSettingsPage() {
                 type="time"
                 value={wakeTime}
                 onChange={(e) => setWakeTime(e.target.value)}
-                className="px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-accent-primary text-sm"
+                className="px-4 py-3 rounded-xl border-[1.5px] border-vitalia-border focus:outline-none focus:border-accent-primary text-sm transition-colors"
               />
             </div>
             <div>
@@ -127,7 +127,7 @@ export default function NotificationsSettingsPage() {
                 type="time"
                 value={sleepTime}
                 onChange={(e) => setSleepTime(e.target.value)}
-                className="px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-accent-primary text-sm"
+                className="px-4 py-3 rounded-xl border-[1.5px] border-vitalia-border focus:outline-none focus:border-accent-primary text-sm transition-colors"
               />
             </div>
           </div>

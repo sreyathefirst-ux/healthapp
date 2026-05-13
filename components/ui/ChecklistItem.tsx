@@ -12,7 +12,7 @@ export function ChecklistItem({ id, label, checked, timeTarget, onChange }: Chec
   return (
     <label
       className="flex items-center gap-3 p-3 rounded-xl hover:bg-bg cursor-pointer transition-colors group"
-      style={{ backgroundColor: checked ? 'rgba(201,184,255,0.08)' : undefined }}
+      style={{ backgroundColor: checked ? 'rgba(168,213,186,0.08)' : undefined }}
     >
       <input
         type="checkbox"
@@ -24,7 +24,7 @@ export function ChecklistItem({ id, label, checked, timeTarget, onChange }: Chec
         {label}
       </span>
       {timeTarget && (
-        <span className="text-xs text-text-secondary bg-gray-100 px-2 py-0.5 rounded-full">
+        <span className="text-xs text-text-secondary bg-accent-primary/10 px-2 py-0.5 rounded-full">
           {timeTarget}
         </span>
       )}

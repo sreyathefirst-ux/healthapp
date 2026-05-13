@@ -105,7 +105,7 @@ export default function ProfileSettingsPage() {
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-accent-primary text-sm"
+        className="w-full px-4 py-3 rounded-xl border-[1.5px] border-vitalia-border focus:outline-none focus:border-accent-primary text-sm transition-colors"
       />
     </div>
   )
@@ -118,7 +118,7 @@ export default function ProfileSettingsPage() {
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         rows={2}
-        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-accent-primary text-sm resize-none"
+        className="w-full px-4 py-3 rounded-xl border-[1.5px] border-vitalia-border focus:outline-none focus:border-accent-primary text-sm resize-none transition-colors"
       />
       <p className="text-xs text-text-secondary mt-1">Separate multiple values with commas</p>
     </div>
@@ -155,7 +155,7 @@ export default function ProfileSettingsPage() {
                 value={medical.success_definition}
                 onChange={(e) => setMedical({ ...medical, success_definition: e.target.value })}
                 rows={3}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-accent-primary text-sm resize-none"
+                className="w-full px-4 py-3 rounded-xl border-[1.5px] border-vitalia-border focus:outline-none focus:border-accent-primary text-sm resize-none transition-colors"
               />
             </div>
           </div>

@@ -186,10 +186,10 @@ export default function GroceryListPage() {
           <h1 className="text-2xl font-bold text-text-primary">Grocery List</h1>
           <div className="space-y-4">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-white rounded-card p-5 animate-pulse">
-                <div className="h-5 bg-gray-200 rounded w-1/4 mb-4" />
+              <div key={i} className="bg-white rounded-card p-5">
+                <div className="h-5 skeleton-shimmer rounded w-1/4 mb-4" />
                 {[1, 2, 3].map((j) => (
-                  <div key={j} className="h-4 bg-gray-100 rounded mb-2" />
+                  <div key={j} className="h-4 skeleton-shimmer rounded mb-2" />
                 ))}
               </div>
             ))}
@@ -273,7 +273,7 @@ export default function GroceryListPage() {
               <span className="text-sm font-medium text-text-primary">Shopping progress</span>
               <span className="text-sm font-bold text-accent-primary">{Math.round((checkedCount / totalItems) * 100)}%</span>
             </div>
-            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+            <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: '#E8E6E3' }}>
               <div
                 className="h-full bg-accent-primary rounded-full transition-all duration-300"
                 style={{ width: `${(checkedCount / totalItems) * 100}%` }}
@@ -296,7 +296,7 @@ export default function GroceryListPage() {
           return (
             <div key={section.title} className="bg-white rounded-card shadow-card overflow-hidden print:shadow-none print:border print:border-gray-200">
               {/* Section header */}
-              <div className="px-5 py-3 border-b border-gray-100 bg-gray-50/60 flex items-center gap-2">
+              <div className="px-5 py-3 border-b border-vitalia-border bg-bg/60 flex items-center gap-2">
                 <span className="text-lg">{section.emoji}</span>
                 <h2 className="font-bold text-text-primary text-sm tracking-wide uppercase">{section.title}</h2>
                 <span className="ml-auto text-xs text-text-secondary font-medium">
@@ -307,9 +307,9 @@ export default function GroceryListPage() {
               <div className="px-5 py-3 space-y-0.5">
                 {/* Unchecked items */}
                 {uncheckedItems.map((item) => (
-                  <label key={item} className="flex items-center gap-3 py-2.5 cursor-pointer group border-b border-gray-50 last:border-0 print:border-gray-200">
+                  <label key={item} className="flex items-center gap-3 py-2.5 cursor-pointer group border-b border-vitalia-border/30 last:border-0 print:border-gray-200">
                     <div className={`w-5 h-5 rounded-md border-2 flex-shrink-0 flex items-center justify-center transition-all print:hidden
-                      border-gray-300 group-hover:border-accent-primary`}>
+                      border-vitalia-border group-hover:border-accent-primary`}>
                       <input
                         type="checkbox"
                         checked={false}
@@ -324,7 +324,7 @@ export default function GroceryListPage() {
 
                 {/* Checked items (dimmed, at bottom) */}
                 {checkedItems.map((item) => (
-                  <label key={item} className="flex items-center gap-3 py-2.5 cursor-pointer group border-b border-gray-50 last:border-0 print:hidden">
+                  <label key={item} className="flex items-center gap-3 py-2.5 cursor-pointer group border-b border-vitalia-border/30 last:border-0 print:hidden">
                     <div className="w-5 h-5 rounded-md border-2 border-accent-primary bg-accent-primary flex-shrink-0 flex items-center justify-center">
                       <input
                         type="checkbox"

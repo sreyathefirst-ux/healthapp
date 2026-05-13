@@ -23,7 +23,7 @@ export function SwapModal({ meal, mealType, day, onClose, onConfirm }: SwapModal
   const [selected, setSelected] = useState<string | null>(null)
   const [confirming, setConfirming] = useState(false)
   const [feedbackText, setFeedbackText] = useState('')
-  const [round, setRound] = useState(0) // 0 = first fetch, 1 = after first feedback
+  const [round, setRound] = useState(0)
   const [error, setError] = useState(false)
   const [errorDetail, setErrorDetail] = useState<string | null>(null)
 
@@ -91,18 +91,18 @@ export function SwapModal({ meal, mealType, day, onClose, onConfirm }: SwapModal
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 40 }}
         transition={{ duration: 0.25 }}
-        className="bg-white rounded-t-3xl sm:rounded-card shadow-2xl w-full sm:max-w-lg max-h-[85vh] overflow-y-auto"
+        className="bg-white rounded-t-3xl sm:rounded-[24px] shadow-[0_20px_60px_rgba(0,0,0,0.1)] w-full sm:max-w-lg max-h-[85vh] overflow-y-auto"
       >
         {/* Header */}
-        <div className="p-5 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white z-10">
+        <div className="p-5 border-b border-vitalia-border flex items-center justify-between sticky top-0 bg-white z-10">
           <div>
             <h2 className="font-bold text-text-primary capitalize">Swap {mealType}</h2>
             {round > 0 && phase === 'pick' && (
               <p className="text-xs text-text-secondary mt-0.5">Refined suggestions based on your feedback</p>
             )}
           </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors">
-            <X size={16} className="text-text-secondary" />
+          <button onClick={onClose} className="w-8 h-8 rounded-full bg-bg flex items-center justify-center hover:bg-accent-primary/10 transition-colors">
+            <X size={16} className="text-vitalia-muted" />
           </button>
         </div>
 
@@ -111,10 +111,10 @@ export function SwapModal({ meal, mealType, day, onClose, onConfirm }: SwapModal
             {phase === 'loading' && (
               <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-4">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="animate-pulse space-y-2">
-                    <div className="h-5 bg-gray-200 rounded w-2/3" />
-                    <div className="h-3 bg-gray-100 rounded" />
-                    <div className="h-3 bg-gray-100 rounded w-4/5" />
+                  <div key={i} className="space-y-2">
+                    <div className="h-5 skeleton-shimmer rounded w-2/3" />
+                    <div className="h-3 skeleton-shimmer rounded" />
+                    <div className="h-3 skeleton-shimmer rounded w-4/5" />
                   </div>
                 ))}
                 <p className="text-center text-text-secondary text-sm pt-2">
@@ -142,7 +142,7 @@ export function SwapModal({ meal, mealType, day, onClose, onConfirm }: SwapModal
                         className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
                           selected === alt.id
                             ? 'border-accent-primary bg-accent-primary/5'
-                            : 'border-gray-100 hover:border-accent-primary/40'
+                            : 'border-vitalia-border hover:border-accent-primary/40'
                         }`}
                       >
                         <h3 className="font-semibold text-text-primary">{alt.name}</h3>
@@ -158,7 +158,7 @@ export function SwapModal({ meal, mealType, day, onClose, onConfirm }: SwapModal
 
                     <button
                       onClick={handleNoneWork}
-                      className="w-full text-center text-sm text-text-secondary hover:text-accent-primary py-2 transition-colors flex items-center justify-center gap-1"
+                      className="w-full text-center text-sm text-vitalia-muted hover:text-accent-primary py-2 transition-colors flex items-center justify-center gap-1"
                     >
                       None of these work for me
                       <ChevronRight size={14} />
@@ -180,7 +180,7 @@ export function SwapModal({ meal, mealType, day, onClose, onConfirm }: SwapModal
                   onChange={(e) => setFeedbackText(e.target.value)}
                   placeholder="e.g. Something quicker, no dairy, more filling, I don't like fish…"
                   rows={3}
-                  className="w-full border border-gray-200 rounded-xl p-3 text-sm text-text-primary placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-primary/40 resize-none"
+                  className="w-full border-[1.5px] border-vitalia-border rounded-xl p-3 text-sm text-text-primary placeholder:text-vitalia-dim focus:outline-none focus:border-accent-primary focus:ring-2 focus:ring-accent-primary/10 resize-none transition-all"
                 />
                 <div className="flex gap-3">
                   <Button variant="secondary" onClick={() => setPhase('pick')} className="flex-1">Back</Button>
@@ -206,7 +206,7 @@ export function SwapModal({ meal, mealType, day, onClose, onConfirm }: SwapModal
                   <Button variant="secondary" onClick={() => { setRound(0); fetchAlternatives() }} className="w-full">
                     Try again with different ideas
                   </Button>
-                  <Button variant="ghost" onClick={onClose} className="w-full text-text-secondary">
+                  <Button variant="ghost" onClick={onClose} className="w-full text-vitalia-muted">
                     Keep original meal
                   </Button>
                 </div>
@@ -217,7 +217,7 @@ export function SwapModal({ meal, mealType, day, onClose, onConfirm }: SwapModal
 
         {/* Footer actions — only when picking */}
         {phase === 'pick' && !error && (
-          <div className="p-5 border-t border-gray-100 flex gap-3 sticky bottom-0 bg-white">
+          <div className="p-5 border-t border-vitalia-border flex gap-3 sticky bottom-0 bg-white">
             <Button variant="secondary" onClick={onClose} className="flex-1">Cancel</Button>
             <Button
               onClick={handleConfirm}

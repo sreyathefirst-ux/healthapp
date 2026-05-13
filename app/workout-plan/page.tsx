@@ -293,14 +293,14 @@ export default function WorkoutPlanPage() {
               exit={{ opacity: 0, scale: 0.95 }}
               className="bg-white rounded-card shadow-card w-full max-w-lg max-h-[80vh] overflow-y-auto"
             >
-              <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+              <div className="p-5 border-b border-vitalia-border flex items-center justify-between">
                 <h2 className="font-bold text-text-primary">Swap Workout</h2>
                 <button onClick={() => setSwapModal(null)}><X size={20} /></button>
               </div>
               <div className="p-5">
                 {swapLoading ? (
                   <div className="space-y-3">
-                    {[1, 2, 3].map((i) => <div key={i} className="h-20 animate-pulse bg-gray-200 rounded-xl" />)}
+                    {[1, 2, 3].map((i) => <div key={i} className="h-20 skeleton-shimmer rounded-xl" />)}
                   </div>
                 ) : (
                   <div className="space-y-3">
@@ -308,7 +308,7 @@ export default function WorkoutPlanPage() {
                       <button
                         key={i}
                         onClick={() => handleSwapConfirm(alt)}
-                        className="w-full text-left p-4 rounded-xl border-2 border-gray-100 hover:border-accent-primary/40 transition-all"
+                        className="w-full text-left p-4 rounded-xl border-2 border-vitalia-border hover:border-accent-primary/40 transition-all"
                       >
                         <h3 className="font-semibold text-text-primary">{alt.workout_name || 'Rest Day'}</h3>
                         <p className="text-text-secondary text-sm mt-1">{alt.location} • {alt.duration_mins} min • {alt.exercises?.length || 0} exercises</p>
