@@ -10,12 +10,12 @@ import { PetState } from '@/types'
 import { Skeleton } from '@/components/ui/Skeleton'
 
 const stateColors: Record<PetState, string> = {
-  thriving: '#A8D5BA',
-  happy: '#A8D5BA',
-  neutral: '#E8E6E3',
-  sad: '#D4C5E8',
-  sick: '#D4C5E8',
-  critical: '#FF6B6B',
+  thriving: '#5DDAB8',
+  happy: '#5DDAB8',
+  neutral: '#EBEBF0',
+  sad: '#B48FE8',
+  sick: '#B48FE8',
+  critical: '#E85D75',
 }
 
 const stateLabels: Record<PetState, string> = {

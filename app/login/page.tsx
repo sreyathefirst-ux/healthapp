@@ -38,21 +38,18 @@ export default function LoginPage() {
   }
 
   return (
-    <div
-      className="min-h-screen flex flex-col items-center justify-center px-8 relative"
-      style={{ background: 'linear-gradient(180deg, #FDFCFA 0%, #F9F8F6 100%)' }}
-    >
-      {/* Thin accent line at top */}
+    <div className="min-h-screen bg-white flex flex-col items-center justify-center px-8 relative">
+      {/* Top gradient line */}
       <div
         className="absolute top-0 left-1/2 -translate-x-1/2 w-16 h-px"
-        style={{ background: 'linear-gradient(90deg, transparent 0%, #A8D5BA 50%, transparent 100%)' }}
+        style={{ background: 'linear-gradient(90deg, transparent 0%, #5DDAB8 50%, transparent 100%)' }}
       />
 
       <div className="w-full max-w-[340px]">
         {/* Header */}
         <div className="text-center mb-14">
-          <h1 className="font-script text-5xl text-vitalia-gradient mb-3">Welcome</h1>
-          <p className="text-[11px] uppercase tracking-[0.8px]" style={{ color: '#8B8B9A' }}>
+          <h1 className="font-bold text-3xl text-text-primary mb-3">Welcome back</h1>
+          <p className="text-[11px] uppercase tracking-[0.8px] text-vitalia-muted">
             Continue your journey
           </p>
         </div>
@@ -60,16 +57,13 @@ export default function LoginPage() {
         {/* Form */}
         <form onSubmit={handleLogin} className="space-y-[22px]">
           {error && (
-            <div className="bg-red-50 text-red-700 px-4 py-3 rounded-[10px] text-sm border border-red-100">
+            <div className="bg-red-50 text-red-700 px-4 py-3 rounded-card text-sm border border-red-100">
               {error}
             </div>
           )}
 
           <div className="flex flex-col gap-1.5">
-            <label
-              className="text-[11px] font-bold uppercase tracking-[0.5px]"
-              style={{ color: '#A8D5BA' }}
-            >
+            <label className="text-[11px] font-bold uppercase tracking-[0.5px] text-text-body">
               Email
             </label>
             <input
@@ -83,10 +77,7 @@ export default function LoginPage() {
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label
-              className="text-[11px] font-bold uppercase tracking-[0.5px]"
-              style={{ color: '#A8D5BA' }}
-            >
+            <label className="text-[11px] font-bold uppercase tracking-[0.5px] text-text-body">
               Password
             </label>
             <input
@@ -102,18 +93,17 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full mt-5 py-3 rounded-[10px] text-white text-[13px] font-bold uppercase tracking-[0.6px] btn-vitalia disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none"
+            className="w-full mt-5 py-3 text-white text-[13px] font-bold uppercase tracking-[0.6px] btn-vitalia disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {loading ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
 
-        <p className="text-center text-[11px] mt-6" style={{ color: '#8B8B9A' }}>
+        <p className="text-center text-[11px] mt-6 text-vitalia-muted">
           Don&apos;t have an account?{' '}
           <Link
             href="/signup"
-            className="font-bold hover:underline"
-            style={{ color: '#A8D5BA' }}
+            className="font-bold hover:underline text-teal"
           >
             Sign up
           </Link>

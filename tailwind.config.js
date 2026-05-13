@@ -8,38 +8,49 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Remapped to new Vitalia palette — all existing Tailwind classes auto-update
-        bg: '#F9F8F6',
+        // Backgrounds
+        bg: '#FFFFFF',
+        'bg-2': '#F8F9FA',
+        'bg-3': '#F3F4F6',
         card: '#FFFFFF',
-        'accent-primary': '#A8D5BA',   // sage green (was purple #C9B8FF)
-        'accent-coral': '#D4C5E8',     // lavender (was coral #FFB5A0)
-        'accent-sage': '#A8D5BA',      // same as primary (was #B8E4C9)
-        'accent-yellow': '#FAF8F4',    // warm white (was yellow #FFE4A0)
+        // Brand colors
+        teal: '#5DDAB8',
+        lavender: '#B48FE8',
+        // Token aliases (keep same names so existing classes auto-update)
+        'accent-primary': '#5DDAB8',   // teal
+        'accent-coral': '#B48FE8',     // lavender
+        'accent-sage': '#6FD8A0',      // gradient start
+        'accent-yellow': '#F8F9FA',    // secondary bg
+        // Text
         'text-primary': '#1A1A2E',
-        'text-secondary': '#5D5D6D',
-        // Vitalia design system tokens
-        'vitalia-sage': '#A8D5BA',
-        'vitalia-lavender': '#D4C5E8',
-        'vitalia-cream': '#FDFCFA',
-        'vitalia-muted': '#8B8B9A',
-        'vitalia-dim': '#C4C4D0',
-        'vitalia-border': '#E8E6E3',
+        'text-body': '#4A4A5A',
+        'text-secondary': '#6B6B8A',
+        // Design system tokens
+        'vitalia-border': '#EBEBF0',
+        'vitalia-muted': '#9B9BAA',
+        'vitalia-dim': '#9B9BAA',
+        'vitalia-sage': '#6FD8A0',
+        'vitalia-lavender': '#B48FE8',
+        'vitalia-cream': '#F8F9FA',
       },
       borderRadius: {
+        sm: '10px',
+        md: '14px',
         card: '20px',
-        btn: '10px',
+        lg: '24px',
+        btn: '999px',   // pill CTAs
         pill: '999px',
       },
       boxShadow: {
-        card: '0px 4px 16px rgba(0,0,0,0.05)',
-        'card-hover': '0px 8px 24px rgba(0,0,0,0.08)',
+        card: '0px 2px 8px rgba(0,0,0,0.06)',
+        'card-hover': '0px 4px 16px rgba(0,0,0,0.08)',
+        'card-lg': '0px 8px 32px rgba(0,0,0,0.10)',
       },
       fontFamily: {
         sans: ['DM Sans', 'sans-serif'],
-        script: ['Great Vibes', 'cursive'],
       },
       backgroundImage: {
-        'vitalia-intro': 'linear-gradient(180deg, #FDFCFA 0%, #F9F8F6 50%, #F3F8F5 100%)',
+        'vitalia-gradient': 'linear-gradient(135deg, #6FD8A0 0%, #5DDAB8 50%, #B48FE8 100%)',
       },
     },
   },

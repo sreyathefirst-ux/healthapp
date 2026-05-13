@@ -106,7 +106,7 @@ export function RecipeModal({ meal, mealType, onClose }: RecipeModalProps) {
           </div>
 
           {/* Why this meal */}
-          <div className="bg-accent-primary/8 rounded-xl p-4" style={{ backgroundColor: 'rgba(168,213,186,0.08)' }}>
+          <div className="bg-accent-primary/8 rounded-xl p-4" style={{ backgroundColor: 'rgba(93,218,184,0.08)' }}>
             <p className="text-xs font-semibold text-accent-primary uppercase tracking-wide mb-1">Why this meal</p>
             <p className="text-sm text-text-secondary leading-relaxed">{meal.reasoning}</p>
           </div>

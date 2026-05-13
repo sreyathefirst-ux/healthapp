@@ -24,7 +24,7 @@ export function Skeleton({ className = '', lines }: SkeletonProps) {
 
 export function CardSkeleton() {
   return (
-    <div className="bg-white rounded-card shadow-card border border-accent-primary/15 p-5 space-y-4">
+    <div className="bg-white rounded-card shadow-card border border-vitalia-border p-5 space-y-4">
       <Skeleton className="h-6 w-1/3" />
       <Skeleton lines={3} />
       <div className="flex gap-2">

@@ -273,7 +273,7 @@ export default function GroceryListPage() {
               <span className="text-sm font-medium text-text-primary">Shopping progress</span>
               <span className="text-sm font-bold text-accent-primary">{Math.round((checkedCount / totalItems) * 100)}%</span>
             </div>
-            <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: '#E8E6E3' }}>
+            <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: '#EBEBF0' }}>
               <div
                 className="h-full bg-accent-primary rounded-full transition-all duration-300"
                 style={{ width: `${(checkedCount / totalItems) * 100}%` }}

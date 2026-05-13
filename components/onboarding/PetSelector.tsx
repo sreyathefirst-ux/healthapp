@@ -266,10 +266,10 @@ export function PetSelector() {
           </div>
 
           {!hasErrors && (
-            <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: '#E8E6E3' }}>
+            <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: '#EBEBF0' }}>
               <motion.div
                 className="h-full rounded-full"
-                style={{ backgroundColor: '#A8D5BA' }}
+                style={{ background: 'linear-gradient(90deg, #6FD8A0, #5DDAB8, #B48FE8)' }}
                 initial={{ width: '0%' }}
                 animate={{ width: `${(doneCount / tasks.length) * 100}%` }}
                 transition={{ duration: 0.5, ease: 'easeOut' }}
@@ -290,7 +290,7 @@ export function PetSelector() {
                     ? 'bg-accent-primary/8 border border-accent-primary/15'
                     : 'bg-white border border-vitalia-border'
                 }`}
-                style={task.status === 'running' ? { backgroundColor: 'rgba(168,213,186,0.08)' } : undefined}
+                style={task.status === 'running' ? { backgroundColor: 'rgba(93,218,184,0.08)' } : undefined}
               >
                 <span className="text-xl w-8 text-center flex-shrink-0">{task.emoji}</span>
                 <span className={`flex-1 text-sm font-medium ${
@@ -311,7 +311,7 @@ export function PetSelector() {
                     <Loader2 size={16} className="text-accent-primary animate-spin" />
                   )}
                   {task.status === 'pending' && (
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#E8E6E3' }} />
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#EBEBF0' }} />
                   )}
                 </div>
               </div>
@@ -366,10 +366,10 @@ export function PetSelector() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-card shadow-card border border-accent-primary/15 p-6 space-y-4"
+            className="bg-white rounded-card shadow-card border border-vitalia-border p-6 space-y-4"
           >
             <div>
-              <label className="block text-[11px] font-bold uppercase tracking-[0.5px] mb-2" style={{ color: '#A8D5BA' }}>
+              <label className="block text-[11px] font-bold uppercase tracking-[0.5px] mb-2 text-text-body">
                 What will you name your {pets.find((p) => p.type === selectedPet)?.emoji}?
               </label>
               <input
@@ -379,7 +379,7 @@ export function PetSelector() {
                 onKeyDown={(e) => e.key === 'Enter' && !loading && petName.trim() && handleMeetPet()}
                 placeholder="Enter a name..."
                 maxLength={20}
-                className="w-full px-4 py-3 rounded-xl border-[1.5px] border-vitalia-border focus:outline-none focus:border-accent-primary text-sm transition-colors"
+                className="vitalia-input"
               />
             </div>
             <Button
