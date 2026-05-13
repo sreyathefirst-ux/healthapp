@@ -6,15 +6,12 @@ import { AppShell } from '@/components/layout/AppShell'
 import { PetWidget } from '@/components/dashboard/PetWidget'
 import { TodaySummaryCard } from '@/components/dashboard/TodaySummaryCard'
 import { QuickLinks } from '@/components/dashboard/QuickLinks'
-import { Card } from '@/components/ui/Card'
-import { ProgressBar } from '@/components/ui/ProgressBar'
 import { createClient } from '@/lib/supabase/client'
 import { Skeleton } from '@/components/ui/Skeleton'
 
 export default function DashboardPage() {
   const router = useRouter()
   const [userName, setUserName] = useState('')
-  const [weeklyProgress, setWeeklyProgress] = useState(0)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -36,27 +33,11 @@ export default function DashboardPage() {
 
       setUserName(profile?.name || '')
 
-      // Update last seen
       const today = new Date().toISOString().split('T')[0]
       await supabase.from('daily_logs').upsert(
         { user_id: user.id, date: today, last_seen_at: new Date().toISOString() },
         { onConflict: 'user_id,date' }
       )
-
-      // Fetch weekly progress
-      const sevenDaysAgo = new Date()
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-      const { data: logs } = await supabase
-        .from('daily_logs')
-        .select('morning_routine_completion, night_routine_completion')
-        .eq('user_id', user.id)
-        .gte('date', sevenDaysAgo.toISOString().split('T')[0])
-
-      if (logs && logs.length > 0) {
-        const avg = logs.reduce((sum, l) =>
-          sum + (l.morning_routine_completion + l.night_routine_completion) / 2, 0) / logs.length
-        setWeeklyProgress(Math.round(avg))
-      }
 
       setLoading(false)
     }
@@ -75,8 +56,8 @@ export default function DashboardPage() {
       <AppShell>
         <div className="space-y-6">
           <Skeleton className="h-8 w-1/2" />
-          <Skeleton className="h-32 w-full" />
-          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-40 w-full rounded-2xl" />
+          <Skeleton className="h-40 w-full rounded-2xl" />
         </div>
       </AppShell>
     )
@@ -85,24 +66,16 @@ export default function DashboardPage() {
   return (
     <AppShell>
       <div className="space-y-6">
-        <div>
+        <div className="pb-2">
           <h1 className="text-2xl font-bold text-text-primary">
-            {greeting()}{userName ? `, ${userName}` : ''}! 👋
+            {greeting()}{userName ? `, ${userName}` : ''}
           </h1>
-          <p className="text-text-secondary mt-1">Here&apos;s your health overview for today.</p>
+          <p className="text-text-secondary text-sm mt-1">Here&apos;s your health overview for today.</p>
         </div>
 
         <PetWidget />
         <TodaySummaryCard />
         <QuickLinks />
-
-        <Card>
-          <h2 className="font-bold text-text-primary mb-4">Weekly Goal Progress</h2>
-          <ProgressBar value={weeklyProgress} showLabel />
-          <p className="text-text-secondary text-sm mt-2">
-            Based on your routine completion this week
-          </p>
-        </Card>
       </div>
     </AppShell>
   )

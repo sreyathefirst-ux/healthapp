@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Card } from '@/components/ui/Card'
+import { Clock, UtensilsCrossed, Dumbbell } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { RoutineItem } from '@/types'
@@ -9,7 +9,6 @@ import { RoutineItem } from '@/types'
 export function TodaySummaryCard() {
   const [loading, setLoading] = useState(true)
   const [morningCompletion, setMorningCompletion] = useState(0)
-  const [nightCompletion, setNightCompletion] = useState(0)
   const [morningTotal, setMorningTotal] = useState(0)
   const [morningChecked, setMorningChecked] = useState(0)
   const [mealsLogged, setMealsLogged] = useState(0)
@@ -34,27 +33,24 @@ export function TodaySummaryCard() {
       const routine = routineRes.data
 
       setMorningCompletion(log?.morning_routine_completion || 0)
-      setNightCompletion(log?.night_routine_completion || 0)
 
       const morningItems = (routine?.morning_items as RoutineItem[]) || []
       setMorningTotal(morningItems.length)
       setMorningChecked(log?.morning_items_checked?.length || 0)
 
-      // Count meals logged
       const mealLog = log?.meal_log as Record<string, string> | null
       if (mealLog) {
         const loggedMeals = Object.values(mealLog).filter((v) => v === 'eaten' || v === 'swapped').length
         setMealsLogged(loggedMeals)
       }
 
-      // Workout status
       const workoutPlan = planRes.data?.workout_plan as Record<string, unknown> | null
       if (workoutPlan && (workoutPlan as { days?: Record<string, unknown> }).days) {
         const dayPlan = (workoutPlan as { days: Record<string, Record<string, unknown>> }).days[dayOfWeek]
         if (!dayPlan) {
           setWorkoutStatus('Rest day 🧘')
         } else if (dayPlan.type === 'rest') {
-          setWorkoutStatus(`Rest day 🧘`)
+          setWorkoutStatus('Rest day 🧘')
         } else if (log?.workout_log && (log.workout_log as Record<string, string>)[dayOfWeek] === 'completed') {
           setWorkoutStatus('Done ✅')
         } else {
@@ -71,41 +67,50 @@ export function TodaySummaryCard() {
 
   if (loading) {
     return (
-      <Card>
-        <Skeleton className="h-5 w-1/3 mb-4" />
-        <Skeleton lines={3} />
-      </Card>
+      <div className="bg-white rounded-2xl p-7 shadow-card border border-vitalia-border">
+        <Skeleton className="h-5 w-1/3 mb-5" />
+        <div className="space-y-3">
+          <Skeleton className="h-11 w-full rounded-lg" />
+          <Skeleton className="h-11 w-full rounded-lg" />
+          <Skeleton className="h-11 w-full rounded-lg" />
+        </div>
+      </div>
     )
   }
 
+  const rows = [
+    {
+      icon: <Clock size={18} className="text-orange-500 flex-shrink-0" />,
+      label: 'Morning routine',
+      value: `${morningChecked} of ${morningTotal} items (${morningCompletion}%)`,
+    },
+    {
+      icon: <UtensilsCrossed size={18} className="text-vitalia-muted flex-shrink-0" />,
+      label: 'Meals logged',
+      value: `${mealsLogged} of 4 today`,
+    },
+    {
+      icon: <Dumbbell size={18} className="text-orange-500 flex-shrink-0" />,
+      label: 'Workout',
+      value: workoutStatus,
+    },
+  ]
+
   return (
-    <Card>
-      <h2 className="font-bold text-text-primary mb-4">Today&apos;s Summary</h2>
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span>🌅</span>
-            <span className="text-sm text-text-secondary">Morning routine</span>
+    <div className="bg-white rounded-2xl p-7 shadow-card border border-vitalia-border">
+      <h3 className="text-xl font-bold text-text-primary mb-5">Today&apos;s Summary</h3>
+      <div className="space-y-1">
+        {rows.map(({ icon, label, value }) => (
+          <div
+            key={label}
+            className="flex items-center gap-3 p-3 rounded-lg hover:bg-bg-2 transition-colors"
+          >
+            {icon}
+            <p className="flex-1 font-medium text-text-primary text-sm">{label}</p>
+            <span className="text-xs text-text-secondary font-medium">{value}</span>
           </div>
-          <span className="text-sm font-medium text-text-primary">
-            {morningChecked} of {morningTotal} items ({morningCompletion}%)
-          </span>
-        </div>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span>🍽️</span>
-            <span className="text-sm text-text-secondary">Meals logged</span>
-          </div>
-          <span className="text-sm font-medium text-text-primary">{mealsLogged} of 4 today</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span>💪</span>
-            <span className="text-sm text-text-secondary">Workout</span>
-          </div>
-          <span className="text-sm font-medium text-text-primary">{workoutStatus}</span>
-        </div>
+        ))}
       </div>
-    </Card>
+    </div>
   )
 }

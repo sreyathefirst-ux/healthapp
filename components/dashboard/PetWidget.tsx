@@ -1,29 +1,28 @@
 'use client'
 
 import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Card } from '@/components/ui/Card'
+import { AnimatePresence, motion } from 'framer-motion'
 import { ProgressBar } from '@/components/ui/ProgressBar'
 import { PetAnimation } from '@/components/pet/PetAnimation'
 import { usePetState } from '@/hooks/usePetState'
 import { PetState } from '@/types'
 import { Skeleton } from '@/components/ui/Skeleton'
 
-const stateColors: Record<PetState, string> = {
-  thriving: '#5DDAB8',
-  happy: '#5DDAB8',
-  neutral: '#EBEBF0',
-  sad: '#B48FE8',
-  sick: '#B48FE8',
-  critical: '#E85D75',
+const stateBadgeStyle: Record<PetState, { bg: string; text: string }> = {
+  thriving: { bg: 'rgba(93,218,184,0.15)', text: '#2aa87a' },
+  happy:    { bg: 'rgba(93,218,184,0.15)', text: '#2aa87a' },
+  neutral:  { bg: 'rgba(235,235,240,0.8)', text: '#5D5D6D' },
+  sad:      { bg: 'rgba(180,143,232,0.15)', text: '#7c52c8' },
+  sick:     { bg: 'rgba(180,143,232,0.15)', text: '#7c52c8' },
+  critical: { bg: 'rgba(232,93,117,0.15)', text: '#c42b4a' },
 }
 
 const stateLabels: Record<PetState, string> = {
   thriving: '✨ Thriving',
-  happy: '😊 Happy',
-  neutral: '😐 Neutral',
-  sad: '😢 Feeling Sad',
-  sick: '🤒 Sick',
+  happy:    '😊 Happy',
+  neutral:  '😐 Neutral',
+  sad:      '😢 Feeling Sad',
+  sick:     '🤒 Sick',
   critical: '💔 Critical',
 }
 
@@ -60,7 +59,7 @@ export function PetWidget() {
 
   if (loading) {
     return (
-      <Card>
+      <div className="bg-white rounded-2xl p-7 shadow-card border border-vitalia-border">
         <div className="flex items-center gap-4">
           <Skeleton className="w-20 h-20 rounded-full" />
           <div className="flex-1 space-y-2">
@@ -68,7 +67,7 @@ export function PetWidget() {
             <Skeleton className="h-3 w-full" />
           </div>
         </div>
-      </Card>
+      </div>
     )
   }
 
@@ -78,50 +77,62 @@ export function PetWidget() {
   if (pet.current_streak >= 7) accessories.push('crown')
   if (pet.current_streak >= 30) accessories.push('sunglasses')
 
-  const stateColor = stateColors[petState]
+  const badge = stateBadgeStyle[petState]
 
   return (
-    <Card className="relative overflow-hidden">
-      <div className="flex items-center gap-6">
-        <div className="relative cursor-pointer" onClick={handlePetClick}>
-          <PetAnimation
-            petType={pet.pet_type}
-            petState={petState}
-            size="md"
-            accessories={accessories}
-          />
-          {fetchingMessage && (
-            <div className="absolute inset-0 flex items-center justify-center bg-white/50 rounded-full">
-              <div className="w-4 h-4 border-2 border-accent-primary border-t-transparent rounded-full animate-spin" />
+    <div className="bg-white rounded-2xl p-7 shadow-card border border-vitalia-border relative overflow-hidden">
+      <div className="flex items-start justify-between gap-6">
+        <div className="flex-1">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="relative cursor-pointer flex-shrink-0" onClick={handlePetClick}>
+              <PetAnimation
+                petType={pet.pet_type}
+                petState={petState}
+                size="md"
+                accessories={accessories}
+              />
+              {fetchingMessage && (
+                <div className="absolute inset-0 flex items-center justify-center bg-white/50 rounded-full">
+                  <div className="w-4 h-4 border-2 border-accent-primary border-t-transparent rounded-full animate-spin" />
+                </div>
+              )}
             </div>
-          )}
-        </div>
-
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <h3 className="font-bold text-lg text-text-primary">{pet.pet_name}</h3>
-            <span
-              className="text-xs font-medium px-2 py-0.5 rounded-full"
-              style={{ backgroundColor: stateColor + '33', color: petState === 'neutral' ? '#5D5D6D' : stateColor }}
-            >
-              {stateLabels[petState]}
-            </span>
+            <div>
+              <h3 className="text-xl font-bold text-text-primary">{pet.pet_name}</h3>
+              <span
+                className="inline-block mt-1 px-3 py-1 text-xs font-semibold rounded-full"
+                style={{ backgroundColor: badge.bg, color: badge.text }}
+              >
+                {stateLabels[petState]}
+              </span>
+            </div>
           </div>
-          <p className="text-text-secondary text-sm mb-3">
+          <p className="text-text-secondary text-sm">
             {pet.current_streak > 0
               ? `🔥 ${pet.current_streak}-day streak! Keep it up!`
               : 'Complete your routines to start a streak!'}
           </p>
-          <ProgressBar
-            value={avgCompletion}
-            color={stateColor}
-            showLabel
-          />
-          <p className="text-xs text-text-secondary mt-1">7-day average completion</p>
+        </div>
+
+        <div className="text-right flex-shrink-0">
+          <p className="text-sm text-text-secondary font-medium mb-1">7-day average completion</p>
+          <p
+            className="text-4xl font-bold"
+            style={{
+              background: 'linear-gradient(to right, #6FD8A0, #B48FE8)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+            }}
+          >
+            {avgCompletion}%
+          </p>
         </div>
       </div>
 
-      {/* Speech bubble */}
+      <div className="mt-6">
+        <ProgressBar value={avgCompletion} />
+      </div>
+
       <AnimatePresence>
         {speechBubble && (
           <motion.div
@@ -135,6 +146,6 @@ export function PetWidget() {
           </motion.div>
         )}
       </AnimatePresence>
-    </Card>
+    </div>
   )
 }
