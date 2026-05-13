@@ -34,7 +34,7 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white flex flex-col items-center justify-center px-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-green-50 flex flex-col items-center justify-center px-8">
       <div className="w-full max-w-[340px]">
         <div className="text-center mb-10">
           <div className="flex justify-center mb-4">

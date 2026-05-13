@@ -95,7 +95,7 @@ export function RoutineChecklist({ type }: RoutineChecklistProps) {
 
         <ProgressBar
           value={completion}
-          color={isMorning ? '#5DDAB8' : '#B48FE8'}
+          color={isMorning ? '#10b981' : '#9333ea'}
           className="mb-5"
         />
 
@@ -137,7 +137,7 @@ export function RoutineChecklist({ type }: RoutineChecklistProps) {
               <div
                 key={item.id}
                 className="flex items-center gap-1 rounded-xl hover:bg-bg transition-colors group"
-                style={{ backgroundColor: checked ? 'rgba(93,218,184,0.06)' : undefined }}
+                style={{ backgroundColor: checked ? 'rgba(16,185,129,0.06)' : undefined }}
               >
                 <label className="flex items-center gap-3 p-3 flex-1 cursor-pointer">
                   <input

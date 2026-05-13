@@ -12,7 +12,7 @@ export function ChecklistItem({ id, label, checked, timeTarget, onChange }: Chec
   return (
     <label
       className="flex items-center gap-3 p-3 rounded-card cursor-pointer transition-colors group"
-      style={{ backgroundColor: checked ? 'rgba(93,218,184,0.06)' : undefined }}
+      style={{ backgroundColor: checked ? 'rgba(16,185,129,0.06)' : undefined }}
     >
       <div className="relative w-5 h-5 flex-shrink-0">
         <input
@@ -25,7 +25,7 @@ export function ChecklistItem({ id, label, checked, timeTarget, onChange }: Chec
           className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${
             checked ? 'border-transparent' : 'border-vitalia-border bg-white'
           }`}
-          style={checked ? { background: 'linear-gradient(135deg, #6FD8A0, #5DDAB8)' } : undefined}
+          style={checked ? { background: 'linear-gradient(135deg, #34d399, #10b981)' } : undefined}
         >
           {checked && (
             <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 12 12">

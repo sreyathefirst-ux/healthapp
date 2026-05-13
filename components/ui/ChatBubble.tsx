@@ -13,7 +13,7 @@ export function ChatBubble({ role, children }: ChatBubbleProps) {
       {!isUser && (
         <div
           className="w-8 h-8 rounded-full flex items-center justify-center text-sm mr-2 flex-shrink-0 mt-1 text-white"
-          style={{ background: 'linear-gradient(135deg, #6FD8A0 0%, #5DDAB8 50%, #B48FE8 100%)' }}
+          style={{ background: 'linear-gradient(135deg, #10b981 0%, #34d399 50%, #9333ea 100%)' }}
         >
           ✨
         </div>
@@ -26,7 +26,7 @@ export function ChatBubble({ role, children }: ChatBubbleProps) {
         }`}
         style={isUser
           ? {
-              background: 'linear-gradient(135deg, #8B7FD8 0%, #B48FE8 100%)',
+              background: 'linear-gradient(135deg, #7c3aed 0%, #9333ea 100%)',
               borderRadius: '20px 4px 20px 20px',
             }
           : { borderRadius: '4px 20px 20px 20px' }

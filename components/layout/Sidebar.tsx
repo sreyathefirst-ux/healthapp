@@ -51,7 +51,7 @@ export function Sidebar() {
                 {isActive && (
                   <div
                     className="ml-auto w-1.5 h-5 rounded-full flex-shrink-0"
-                    style={{ background: 'linear-gradient(to bottom, #6FD8A0, #B48FE8)' }}
+                    style={{ background: 'linear-gradient(to bottom, #10b981, #9333ea)' }}
                   />
                 )}
               </Link>

@@ -119,7 +119,7 @@ export function PetWidget() {
           <p
             className="text-4xl font-bold"
             style={{
-              background: 'linear-gradient(to right, #6FD8A0, #B48FE8)',
+              background: 'linear-gradient(to right, #10b981, #9333ea)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
             }}

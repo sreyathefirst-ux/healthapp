@@ -17,7 +17,7 @@ export function ProgressBar({ value, color, className = '', showLabel }: Progres
         <div
           className="h-full rounded-pill transition-all duration-500 ease-out"
           style={isGradient
-            ? { width: `${clampedValue}%`, background: 'linear-gradient(90deg, #6FD8A0, #5DDAB8, #B48FE8)' }
+            ? { width: `${clampedValue}%`, background: 'linear-gradient(90deg, #10b981, #34d399, #9333ea)' }
             : { width: `${clampedValue}%`, backgroundColor: color }
           }
         />

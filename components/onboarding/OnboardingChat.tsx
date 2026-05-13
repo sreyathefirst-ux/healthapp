@@ -224,7 +224,7 @@ export function OnboardingChat() {
               <div
                 key={i}
                 className="flex-1 h-1.5 rounded-full transition-all"
-                style={{ backgroundColor: i < currentStep ? '#5DDAB8' : '#EBEBF0' }}
+                style={{ backgroundColor: i < currentStep ? '#10b981' : '#EBEBF0' }}
                 title={label}
               />
             ))}

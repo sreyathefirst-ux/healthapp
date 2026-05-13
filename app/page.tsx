@@ -53,16 +53,16 @@ export default function RootPage() {
     <div className="h-screen overflow-y-scroll snap-y snap-mandatory scroll-smooth">
 
       {/* ── Section 1: Intro ───────────────────────────────────────── */}
-      <section className="h-screen snap-start flex flex-col items-center justify-center px-8 text-center relative bg-white flex-shrink-0">
+      <section className="h-screen snap-start flex flex-col items-center justify-center px-8 text-center relative bg-gradient-to-br from-slate-50 via-purple-50 to-green-50 flex-shrink-0">
         {/* Breathing circle */}
         <div className="relative w-36 h-36 flex items-center justify-center mb-16">
           <div
             className="absolute inset-0 rounded-full border-2 animate-breathe"
-            style={{ borderColor: '#6FD8A0' }}
+            style={{ borderColor: '#10b981' }}
           />
           <div
             className="absolute inset-0 rounded-full border animate-breathe-2"
-            style={{ borderColor: '#B48FE8' }}
+            style={{ borderColor: '#9333ea' }}
           />
           <div className="relative z-10">
             <Image src="/leaf-logo.png" alt="Vitalia" width={85} height={88} />
@@ -102,7 +102,7 @@ export default function RootPage() {
       {/* ── Section 2: Create Account ─────────────────────────────── */}
       <section
         ref={signupRef}
-        className="h-screen snap-start flex flex-col items-center justify-center px-8 bg-white flex-shrink-0"
+        className="h-screen snap-start flex flex-col items-center justify-center px-8 bg-gradient-to-br from-slate-50 via-purple-50 to-green-50 flex-shrink-0"
       >
         <div className="w-full max-w-[340px]">
           <div className="text-center mb-10">

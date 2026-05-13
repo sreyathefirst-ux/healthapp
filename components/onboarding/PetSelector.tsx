@@ -269,7 +269,7 @@ export function PetSelector() {
             <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: '#EBEBF0' }}>
               <motion.div
                 className="h-full rounded-full"
-                style={{ background: 'linear-gradient(90deg, #6FD8A0, #5DDAB8, #B48FE8)' }}
+                style={{ background: 'linear-gradient(90deg, #10b981, #34d399, #9333ea)' }}
                 initial={{ width: '0%' }}
                 animate={{ width: `${(doneCount / tasks.length) * 100}%` }}
                 transition={{ duration: 0.5, ease: 'easeOut' }}

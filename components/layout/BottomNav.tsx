@@ -31,14 +31,14 @@ export function BottomNav() {
               <span className="text-2xl">{emoji}</span>
               <span
                 className={`text-[10px] font-${isActive ? 'semibold' : 'normal'}`}
-                style={{ color: isActive ? '#5DDAB8' : '#9B9BAA' }}
+                style={{ color: isActive ? '#10b981' : '#9B9BAA' }}
               >
                 {label}
               </span>
               {isActive && (
                 <span
                   className="w-1 h-1 rounded-full -mt-0.5"
-                  style={{ background: 'linear-gradient(135deg, #6FD8A0, #5DDAB8)' }}
+                  style={{ background: 'linear-gradient(135deg, #34d399, #10b981)' }}
                 />
               )}
             </Link>

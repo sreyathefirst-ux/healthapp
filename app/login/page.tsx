@@ -38,11 +38,11 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white flex flex-col items-center justify-center px-8 relative">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-green-50 flex flex-col items-center justify-center px-8 relative">
       {/* Top gradient line */}
       <div
         className="absolute top-0 left-1/2 -translate-x-1/2 w-16 h-px"
-        style={{ background: 'linear-gradient(90deg, transparent 0%, #5DDAB8 50%, transparent 100%)' }}
+        style={{ background: 'linear-gradient(90deg, transparent 0%, #10b981 50%, transparent 100%)' }}
       />
 
       <div className="w-full max-w-[340px]">
