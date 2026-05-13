@@ -282,6 +282,10 @@ export default function MealPlanPage() {
   const weekStart = getWeekStartDate(weekOffset)
   const dayMeals = plan?.days?.[selectedDay] as DayMeals | undefined
 
+  const totalCalories = dayMeals
+    ? (['breakfast', 'lunch', 'dinner', 'snack'] as const).reduce((sum, mt) => sum + (dayMeals[mt]?.calories ?? 0), 0)
+    : 0
+
   // Full-page empty state for first-time users (current week, no plan)
   if (!loading && !plan && weekOffset === 0 && !fetchError) {
     return (
@@ -307,29 +311,47 @@ export default function MealPlanPage() {
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-text-primary">Meal Plan</h1>
           {plan && (
-            <Button variant="secondary" size="sm" onClick={() => handleGenerate()} loading={generating}>
-              <RefreshCw size={14} />
+            <button
+              onClick={() => handleGenerate()}
+              disabled={generating}
+              className="flex items-center gap-2 px-4 py-2 rounded-full border-2 border-lavender text-lavender hover:bg-lavender/10 transition-colors font-medium text-sm disabled:opacity-50"
+            >
+              <RefreshCw size={16} className={generating ? 'animate-spin' : ''} />
               Regenerate
-            </Button>
+            </button>
           )}
         </div>
 
+        {/* Daily calories — shown when meals are loaded */}
+        {dayMeals && !loading && (
+          <div className="p-6 bg-gradient-to-r from-orange-50 to-orange-100 rounded-2xl border border-orange-200">
+            <p className="text-text-secondary text-sm font-medium mb-1">Total Daily Calories</p>
+            <div className="flex items-baseline gap-2">
+              <span className="text-4xl font-bold text-orange-600">{totalCalories}</span>
+              <span className="text-base text-orange-600 font-semibold">kcal</span>
+            </div>
+          </div>
+        )}
+
         {/* Week selector */}
         <div className="flex items-center gap-4">
-          <button onClick={() => setWeekOffset((o) => o - 1)} className="p-2 rounded-xl hover:bg-white transition-colors">
-            <ChevronLeft size={20} />
+          <button
+            onClick={() => setWeekOffset((o) => o - 1)}
+            className="p-2 rounded-lg hover:bg-bg-2 transition-colors text-text-secondary"
+          >
+            <ChevronLeft size={22} />
           </button>
           <div className="flex-1 text-center">
-            <p className="font-semibold text-text-primary">
+            <p className="font-bold text-text-primary">
               Week of {new Date(weekStart + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}
             </p>
           </div>
           <button
             onClick={() => setWeekOffset((o) => Math.min(0, o + 1))}
             disabled={weekOffset === 0}
-            className="p-2 rounded-xl hover:bg-white transition-colors"
+            className="p-2 rounded-lg hover:bg-bg-2 transition-colors text-text-secondary disabled:opacity-30"
           >
-            <ChevronRight size={20} className={weekOffset === 0 ? 'opacity-30' : ''} />
+            <ChevronRight size={22} />
           </button>
         </div>
 
@@ -340,10 +362,10 @@ export default function MealPlanPage() {
               <button
                 key={day}
                 onClick={() => setSelectedDay(day)}
-                className={`flex-shrink-0 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all ${
                   selectedDay === day
-                    ? 'bg-accent-primary text-text-primary'
-                    : 'bg-white text-text-secondary hover:bg-accent-primary/10'
+                    ? 'bg-gradient-to-r from-teal to-accent-sage text-white shadow-sm'
+                    : 'bg-white text-text-secondary hover:bg-bg-2 border border-vitalia-border'
                 }`}
               >
                 {DAY_LABELS[i]}
@@ -378,7 +400,7 @@ export default function MealPlanPage() {
             </Button>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-6">
             {(['breakfast', 'lunch', 'dinner', 'snack'] as const).map((mealType) => {
               const meal = dayMeals[mealType]
               if (!meal) return null
