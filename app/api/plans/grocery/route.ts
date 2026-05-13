@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 
 export async function POST(req: Request) {
   try {
+    console.log('[grocery] === START ===')
     const { ingredients } = await req.json()
 
     const supabase = createClient()
@@ -10,10 +11,12 @@ export async function POST(req: Request) {
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
     if (!Array.isArray(ingredients) || ingredients.length === 0) {
+      console.error('[grocery] no ingredients provided in request body')
       return Response.json({ error: 'No ingredients provided' }, { status: 400 })
     }
 
     console.log('[grocery] aggregating', ingredients.length, 'ingredient lines')
+    console.log('[grocery] calling Gemini to convert quantities...')
 
     const prompt = `You are a grocery shopping assistant. Below is a raw list of ingredient lines from a 7-day meal plan (in recipe quantities like "1/2 tsp cumin", "2 tbsp olive oil").
 
@@ -86,6 +89,8 @@ Only include sections that have at least one item. Sort items alphabetically wit
       { responseMimeType: 'application/json' }
     )
 
+    console.log('[grocery] Gemini raw response:', text?.slice(0, 500))
+
     if (!text) {
       console.error('[grocery] model returned no text')
       return Response.json({ error: 'Failed to generate grocery list' }, { status: 500 })
@@ -96,7 +101,11 @@ Only include sections that have at least one item. Sort items alphabetically wit
       const match = stripped.match(/\{[\s\S]*\}/)
       if (!match) throw new Error('No JSON object found')
       const result = JSON.parse(match[0])
-      console.log('[grocery] sections generated:', result.sections?.length, '| items total:', result.sections?.reduce((acc: number, s: { items: string[] }) => acc + s.items.length, 0))
+      const parsedList = result.sections
+      console.log('[grocery] parsed grocery list:', JSON.stringify(parsedList?.slice(0, 2), null, 2))
+      console.log('[grocery] sections generated:', parsedList?.length, '| items total:', parsedList?.reduce((acc: number, s: { items: string[] }) => acc + s.items.length, 0))
+      console.log('[grocery] saving to state...')
+      console.log('[grocery] === DONE ===')
       return Response.json(result)
     } catch (e) {
       console.error('[grocery] parse error:', (e as Error).message, '\nRaw:', text.slice(0, 400))
