@@ -1,9 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { ExerciseItem } from './ExerciseItem'
 import { WorkoutDay, WorkoutLogStatus, Exercise } from '@/types'
 import { RefreshCw, Plus, Check, X, ChevronDown, Dumbbell, Clock } from 'lucide-react'
+
+const GENDER_KEY = 'exercise_demo_gender'
 
 interface WorkoutDayCardProps {
   workout: WorkoutDay
@@ -29,6 +31,21 @@ export function WorkoutDayCard({ workout, day, logStatus, onSwap, onLog, onUpdat
   const [newSets, setNewSets] = useState('3')
   const [newReps, setNewReps] = useState('10')
   const [newRest, setNewRest] = useState('60')
+
+  // Gender demo toggle — persisted in localStorage
+  const [gender, setGender] = useState<'male' | 'female'>('female')
+
+  useEffect(() => {
+    const stored = localStorage.getItem(GENDER_KEY)
+    if (stored === 'male' || stored === 'female') {
+      setGender(stored)
+    }
+  }, [])
+
+  function handleGenderChange(g: 'male' | 'female') {
+    setGender(g)
+    localStorage.setItem(GENDER_KEY, g)
+  }
 
   // Location adaptation state
   const [adapting, setAdapting] = useState(false)
@@ -234,6 +251,31 @@ export function WorkoutDayCard({ workout, day, logStatus, onSwap, onLog, onUpdat
           )}
         </div>
 
+        {/* Gender demo toggle */}
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-slate-500 font-medium mr-1">Demo:</span>
+          <button
+            onClick={() => handleGenderChange('male')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+              gender === 'male'
+                ? 'bg-slate-800 text-white'
+                : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'
+            }`}
+          >
+            👤 Male
+          </button>
+          <button
+            onClick={() => handleGenderChange('female')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+              gender === 'female'
+                ? 'bg-slate-800 text-white'
+                : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'
+            }`}
+          >
+            👩 Female
+          </button>
+        </div>
+
         {/* Exercise list or adapting loader */}
         {adapting ? (
           <div className="flex items-center justify-center py-16 bg-white rounded-2xl border border-slate-200">
@@ -250,6 +292,7 @@ export function WorkoutDayCard({ workout, day, logStatus, onSwap, onLog, onUpdat
                 key={exercise.id}
                 exercise={exercise}
                 index={i}
+                gender={gender}
                 onRemove={onUpdate ? () => handleRemoveExercise(exercise.id) : undefined}
                 onGifLoaded={onUpdate ? (exerciseId, gifUrl) => {
                   onUpdate(day, {

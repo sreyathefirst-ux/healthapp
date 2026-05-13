@@ -1,17 +1,18 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Dumbbell, Play, X, Check } from 'lucide-react'
+import { Play, X, Check } from 'lucide-react'
 import { Exercise } from '@/types'
 
 interface ExerciseItemProps {
   exercise: Exercise
   index: number
+  gender: 'male' | 'female'
   onGifLoaded?: (exerciseId: string, gifUrl: string) => void
   onRemove?: () => void
 }
 
-export function ExerciseItem({ exercise, index, onGifLoaded, onRemove }: ExerciseItemProps) {
+export function ExerciseItem({ exercise, index, gender, onGifLoaded, onRemove }: ExerciseItemProps) {
   const [gifUrl, setGifUrl] = useState<string | null>(exercise.gif_url || null)
   const [gifError, setGifError] = useState(false)
   const [gifLoading, setGifLoading] = useState(false)
@@ -27,7 +28,7 @@ export function ExerciseItem({ exercise, index, onGifLoaded, onRemove }: Exercis
     if (gifUrl || gifError) return
 
     setGifLoading(true)
-    fetch(`/api/exercises/gif?name=${encodeURIComponent(exercise.name)}`)
+    fetch(`/api/exercises/gif?name=${encodeURIComponent(exercise.name)}&gender=${gender}`)
       .then((r) => r.json())
       .then((d) => {
         if (d.gif_url) {
@@ -40,7 +41,7 @@ export function ExerciseItem({ exercise, index, onGifLoaded, onRemove }: Exercis
       .catch(() => setGifError(true))
       .finally(() => setGifLoading(false))
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [exercise.name, exercise.gif_url])
+  }, [exercise.name, exercise.gif_url, gender])
 
   const hasImage = gifUrl && !gifError
 
@@ -54,13 +55,15 @@ export function ExerciseItem({ exercise, index, onGifLoaded, onRemove }: Exercis
     <>
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow">
 
-        {/* Full-width image on top */}
+        {/* Full-width video player area on top */}
         <div
           onClick={() => hasImage && setModalOpen(true)}
-          className={`relative w-full h-56 bg-slate-100 ${hasImage ? 'cursor-pointer group' : ''}`}
+          className={`relative w-full h-56 ${hasImage ? 'cursor-pointer group' : 'bg-slate-900'}`}
         >
           {gifLoading ? (
-            <div className="skeleton-shimmer w-full h-full" />
+            <div className="w-full h-full bg-slate-900 flex items-center justify-center">
+              <div className="w-8 h-8 border-2 border-slate-600 border-t-slate-300 rounded-full animate-spin" />
+            </div>
           ) : hasImage ? (
             <>
               <img
@@ -69,29 +72,31 @@ export function ExerciseItem({ exercise, index, onGifLoaded, onRemove }: Exercis
                 className="w-full h-full object-cover"
                 onError={() => setGifError(true)}
               />
+              {/* Hover overlay with play button */}
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-colors flex items-center justify-center">
                 <div className="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg">
                   <Play size={20} className="text-slate-800 fill-slate-800 ml-0.5" />
                 </div>
               </div>
-              <span className="absolute bottom-3 right-3 bg-black/50 text-white text-xs px-2.5 py-1 rounded-full backdrop-blur-sm font-medium">
-                Tap for form
+              {/* Looping indicator badge — bottom-left */}
+              <span className="absolute bottom-3 left-3 bg-black/50 text-white text-xs px-2.5 py-1 rounded-full backdrop-blur-sm font-medium">
+                ▶ Playing
               </span>
             </>
           ) : (
-            <div className="flex flex-col items-center justify-center h-full gap-3">
-              <div className="w-14 h-14 rounded-full bg-slate-200 flex items-center justify-center">
-                <Dumbbell size={24} className="text-slate-400" />
+            /* Video unavailable placeholder */
+            <div className="flex flex-col items-center justify-center h-full gap-3 bg-slate-900">
+              <div className="w-14 h-14 rounded-full bg-slate-700 flex items-center justify-center">
+                <Play size={24} className="text-slate-400 ml-0.5" />
               </div>
-              {exercise.sets && exercise.reps && (
-                <span className="text-sm font-bold text-slate-400">
-                  {exercise.sets} × {exercise.reps}
-                </span>
-              )}
+              <span className="text-sm font-medium text-slate-400 text-center px-4">
+                {exercise.name}
+              </span>
+              <span className="text-xs text-slate-600">Demo unavailable</span>
             </div>
           )}
 
-          {/* Exercise number badge */}
+          {/* Exercise number badge — top-left */}
           <div className="absolute top-3 left-3 bg-black/50 text-white text-xs font-semibold px-2.5 py-1 rounded-full backdrop-blur-sm">
             #{index + 1}
           </div>
@@ -180,7 +185,7 @@ export function ExerciseItem({ exercise, index, onGifLoaded, onRemove }: Exercis
             className="bg-white rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="relative">
+            <div className="relative bg-slate-900">
               <img
                 src={gifUrl!}
                 alt={exercise.name}

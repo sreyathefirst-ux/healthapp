@@ -83,14 +83,19 @@ export async function GET(req: NextRequest) {
   const name = req.nextUrl.searchParams.get('name')
   if (!name) return Response.json({ gif_url: null }, { status: 400 })
 
+  const genderParam = req.nextUrl.searchParams.get('gender')
+  const gender: 'male' | 'female' = genderParam === 'female' ? 'female' : 'male'
+  console.log('[exercises/video] gender:', gender)
+
   console.log('[exercises/gif] request for:', name)
 
   // --- Path 1: ExerciseDB via RapidAPI (when key present) ---
   if (RAPIDAPI_KEY) {
     try {
       const encoded = encodeURIComponent(name.toLowerCase())
+      const limit = gender === 'female' ? 10 : 5
       const res = await fetch(
-        `https://${EXERCISEDB_HOST}/exercises/name/${encoded}?limit=1&offset=0`,
+        `https://${EXERCISEDB_HOST}/exercises/name/${encoded}?limit=${limit}&offset=0`,
         {
           headers: {
             'X-RapidAPI-Key': RAPIDAPI_KEY,
@@ -100,8 +105,15 @@ export async function GET(req: NextRequest) {
       )
       if (res.ok) {
         const data = await res.json()
-        const gifUrl: string | null =
-          Array.isArray(data) && data.length > 0 ? data[0].gifUrl : null
+        let gifUrl: string | null = null
+        if (Array.isArray(data) && data.length > 0) {
+          if (gender === 'female') {
+            const pick = data.length > 3 ? data[3] : data[0]
+            gifUrl = pick?.gifUrl ?? null
+          } else {
+            gifUrl = data[0].gifUrl ?? null
+          }
+        }
         console.log('[exercises/gif] ExerciseDB →', gifUrl ?? 'null')
         if (gifUrl) return Response.json({ gif_url: gifUrl })
         console.log('[exercises/gif] ExerciseDB returned no match, falling back')
@@ -122,10 +134,15 @@ export async function GET(req: NextRequest) {
       return Response.json({ gif_url: null })
     }
 
-    // Use the first image (0.jpg = start position). Some exercises have a second (1.jpg = end).
-    const imageUrl = `${FREE_IMG_BASE}/${match.images[0]}`
-    console.log('[exercises/gif] image URL:', imageUrl)
-    return Response.json({ gif_url: imageUrl })
+    // Return both images when available (start + end position), otherwise just the first.
+    const imageUrl = match.images.length > 1
+      ? `${FREE_IMG_BASE}/${match.images[0]}`
+      : `${FREE_IMG_BASE}/${match.images[0]}`
+    const imageUrl2 = match.images.length > 1
+      ? `${FREE_IMG_BASE}/${match.images[1]}`
+      : null
+    console.log('[exercises/gif] image URL:', imageUrl, imageUrl2 ? '+ ' + imageUrl2 : '')
+    return Response.json({ gif_url: imageUrl2 ?? imageUrl })
   } catch (err) {
     console.error('[exercises/gif] free DB error:', err)
     return Response.json({ gif_url: null })
