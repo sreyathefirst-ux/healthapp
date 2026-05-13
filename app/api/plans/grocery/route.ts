@@ -1,6 +1,8 @@
 import { callOpenRouter } from '@/lib/openrouter'
 import { createClient } from '@/lib/supabase/server'
 
+export const maxDuration = 60
+
 export async function POST(req: Request) {
   try {
     console.log('[grocery] === START ===')
@@ -82,11 +84,15 @@ Return ONLY valid JSON (no markdown, no backticks):
 
 Only include sections that have at least one item. Sort items alphabetically within each section.`
 
+    // Use 8192 tokens (full week = 100+ ingredients → large JSON output).
+    // Disable thinking (thinkingBudget: 0) — it adds latency and can conflict
+    // with JSON mode on gemini-2.5-flash, causing empty text responses.
+    // Pass debugLabel so we can see exactly what Gemini returns in server logs.
     const { text } = await callOpenRouter(
       [{ role: 'user', content: prompt }],
-      2048,
-      undefined,
-      { responseMimeType: 'application/json' }
+      8192,
+      'grocery',
+      { thinkingConfig: { thinkingBudget: 0 } }
     )
 
     console.log('[grocery] Gemini raw response:', text?.slice(0, 500))
