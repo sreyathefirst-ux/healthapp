@@ -65,7 +65,7 @@ export default function RootPage() {
             style={{ borderColor: '#B48FE8' }}
           />
           <div className="relative z-10">
-            <Image src="/leaf-logo.svg" alt="Vitalia" width={85} height={110} />
+            <Image src="/leaf-logo.png" alt="Vitalia" width={85} height={110} />
           </div>
         </div>
 
@@ -107,7 +107,7 @@ export default function RootPage() {
         <div className="w-full max-w-[340px]">
           <div className="text-center mb-10">
             <div className="flex justify-center mb-4">
-              <Image src="/leaf-logo.svg" alt="Vitalia" width={40} height={52} />
+              <Image src="/leaf-logo.png" alt="Vitalia" width={40} height={52} />
             </div>
             <h2 className="font-black text-2xl tracking-[2px] uppercase text-text-primary">VITALIA</h2>
             <p className="text-text-secondary mt-2 text-sm">Start your personalized health journey</p>
