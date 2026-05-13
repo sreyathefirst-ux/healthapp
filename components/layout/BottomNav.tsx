@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 const navItems = [
-  { href: '/', emoji: '🏠', label: 'Home' },
+  { href: '/dashboard', emoji: '🏠', label: 'Home' },
   { href: '/meal-plan', emoji: '🍽️', label: 'Meals' },
   { href: '/workout-plan', emoji: '💪', label: 'Workout' },
   { href: '/routine/morning', emoji: '✅', label: 'Routine' },
@@ -18,7 +18,7 @@ export function BottomNav() {
     <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-vitalia-border z-40 safe-area-pb">
       <div className="flex items-center justify-around px-4 py-2">
         {navItems.map(({ href, emoji, label }) => {
-          const isActive = href === '/' ? pathname === '/' : pathname.startsWith(href)
+          const isActive = href === '/dashboard' ? pathname === '/dashboard' : pathname.startsWith(href)
           return (
             <Link
               key={href}

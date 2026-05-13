@@ -187,7 +187,7 @@ export default function OnboardingResultsPage() {
             </button>
           ) : (
             <button
-              onClick={() => router.push('/')}
+              onClick={() => router.push('/dashboard')}
               className="flex-1 flex items-center justify-center gap-2 py-3 px-6 bg-text-primary text-white font-semibold rounded-btn hover:opacity-90 transition-opacity"
             >
               Go to my dashboard

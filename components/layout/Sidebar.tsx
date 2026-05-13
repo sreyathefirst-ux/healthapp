@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { Home, UtensilsCrossed, Dumbbell, CheckSquare, Settings } from 'lucide-react'
 
 const navItems = [
-  { href: '/', label: 'Home', icon: Home, emoji: '🏠' },
+  { href: '/dashboard', label: 'Home', icon: Home, emoji: '🏠' },
   { href: '/meal-plan', label: 'Meal Plan', icon: UtensilsCrossed, emoji: '🍽️' },
   { href: '/workout-plan', label: 'Workout', icon: Dumbbell, emoji: '💪' },
   { href: '/routine/morning', label: 'Routine', icon: CheckSquare, emoji: '✅' },
@@ -35,7 +35,7 @@ export function Sidebar() {
 
         <nav className="flex flex-col gap-1">
           {navItems.map(({ href, label, emoji }) => {
-            const isActive = href === '/' ? pathname === '/' : pathname.startsWith(href)
+            const isActive = href === '/dashboard' ? pathname === '/dashboard' : pathname.startsWith(href)
             return (
               <Link
                 key={href}
