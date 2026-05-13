@@ -365,7 +365,7 @@ export default function MealPlanPage() {
                 className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all ${
                   selectedDay === day
                     ? 'bg-gradient-to-r from-teal to-accent-sage text-white shadow-sm'
-                    : 'bg-white text-text-secondary hover:bg-bg-2 border border-vitalia-border'
+                    : 'bg-white text-text-secondary hover:bg-slate-50 border border-slate-200'
                 }`}
               >
                 {DAY_LABELS[i]}

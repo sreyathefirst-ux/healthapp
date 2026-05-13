@@ -77,7 +77,7 @@ export function WorkoutDayCard({ workout, day, logStatus, onSwap, onLog, onUpdat
 
   if (workout.type === 'rest') {
     return (
-      <div className="bg-white rounded-2xl shadow-sm border border-vitalia-border overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="p-8 text-center">
           <div className="text-5xl mb-3">🧘</div>
           <h3 className="font-bold text-text-primary text-lg mb-2">Rest Day</h3>

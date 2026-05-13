@@ -256,7 +256,7 @@ export default function WorkoutPlanPage() {
                   className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all relative ${
                     selectedDay === day
                       ? 'bg-gradient-to-r from-teal to-accent-sage text-white shadow-sm'
-                      : 'bg-white text-text-secondary hover:bg-bg-2 border border-vitalia-border'
+                      : 'bg-white text-text-secondary hover:bg-slate-50 border border-slate-200'
                   }`}
                 >
                   {DAY_LABELS[i]}
@@ -306,7 +306,7 @@ export default function WorkoutPlanPage() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-card shadow-card w-full max-w-lg max-h-[80vh] overflow-y-auto"
+              className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[80vh] overflow-y-auto border border-slate-200"
             >
               <div className="p-5 border-b border-vitalia-border flex items-center justify-between">
                 <h2 className="font-bold text-text-primary">Swap Workout</h2>
