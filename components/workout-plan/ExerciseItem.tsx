@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Dumbbell, Play, X, Check, Bookmark } from 'lucide-react'
+import { Dumbbell, Play, X, Check } from 'lucide-react'
 import { Exercise } from '@/types'
 
 interface ExerciseItemProps {
@@ -18,7 +18,6 @@ export function ExerciseItem({ exercise, index, onGifLoaded, onRemove }: Exercis
   const [modalOpen, setModalOpen] = useState(false)
   const [expanded, setExpanded] = useState(false)
   const [checked, setChecked] = useState(false)
-  const [saved, setSaved] = useState(false)
 
   useEffect(() => {
     if (exercise.gif_url) {
@@ -149,32 +148,22 @@ export function ExerciseItem({ exercise, index, onGifLoaded, onRemove }: Exercis
           <div className="flex items-center gap-2 pt-1 border-t border-slate-100">
             <button
               onClick={() => setChecked(!checked)}
-              title="Mark done"
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
                 checked
                   ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
-                  : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                  : 'bg-slate-100 text-slate-500 hover:bg-slate-200 border border-transparent'
               }`}
             >
               <Check size={14} />
-              {checked ? 'Done' : 'Mark done'}
-            </button>
-            <button
-              onClick={() => setSaved(!saved)}
-              title="Save exercise"
-              className={`p-2 rounded-lg transition-all ${
-                saved ? 'bg-purple-100 text-purple-600' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
-              }`}
-            >
-              <Bookmark size={14} fill={saved ? 'currentColor' : 'none'} />
+              {checked ? 'Completed' : 'Complete'}
             </button>
             {onRemove && (
               <button
                 onClick={onRemove}
-                title="Remove exercise"
-                className="ml-auto p-2 rounded-lg text-slate-300 hover:bg-red-50 hover:text-red-400 transition-all"
+                className="ml-auto flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-slate-400 hover:bg-red-50 hover:text-red-500 border border-transparent hover:border-red-200 transition-all"
               >
                 <X size={14} />
+                Remove
               </button>
             )}
           </div>

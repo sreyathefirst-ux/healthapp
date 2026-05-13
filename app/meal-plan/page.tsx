@@ -5,6 +5,7 @@ import { AppShell } from '@/components/layout/AppShell'
 import { MealCard } from '@/components/meal-plan/MealCard'
 import { SwapModal } from '@/components/meal-plan/SwapModal'
 import { RecipeModal } from '@/components/meal-plan/RecipeModal'
+import { ReplaceMealModal } from '@/components/meal-plan/ReplaceMealModal'
 import { Button } from '@/components/ui/Button'
 import { CardSkeleton } from '@/components/ui/Skeleton'
 import { useToast } from '@/components/ui/Toast'
@@ -49,6 +50,7 @@ export default function MealPlanPage() {
   const [generating, setGenerating] = useState(false)
   const [selectedDay, setSelectedDay] = useState<typeof DAYS[number]>('monday')
   const [swapModal, setSwapModal] = useState<{ meal: Meal; mealType: string; day: string } | null>(null)
+  const [replaceModal, setReplaceModal] = useState<{ meal: Meal; mealType: string; day: string } | null>(null)
   const [recipeModal, setRecipeModal] = useState<{ meal: Meal; mealType: string } | null>(null)
   const [mealLog, setMealLog] = useState<Record<string, MealLogStatus>>({})
   // Track which days have already had image generation triggered to avoid double-requests
@@ -279,6 +281,37 @@ export default function MealPlanPage() {
     toast('Meal swapped! 🔄', 'success')
   }
 
+  async function handleReplaceMeal(newMeal: Meal) {
+    if (!replaceModal || !plan) return
+    const updatedPlan = {
+      ...plan,
+      days: {
+        ...plan.days,
+        [replaceModal.day]: {
+          ...(plan.days[replaceModal.day as keyof typeof plan.days] ?? {}),
+          [replaceModal.mealType]: newMeal,
+        },
+      },
+    }
+    setPlan(updatedPlan)
+    setReplaceModal(null)
+
+    try {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const weekStart = getWeekStartDate(weekOffset)
+      await supabase.from('weekly_plans').update({ meal_plan: updatedPlan }).eq('user_id', user.id).eq('week_start_date', weekStart)
+      // Trigger image generation for the replaced meal
+      const ws = getWeekStartDate(weekOffset)
+      imageGenTriggered.current.delete(`${ws}_${replaceModal.day}`)
+      generateImagesForDay(updatedPlan, replaceModal.day, ws)
+      toast('Meal replaced! 🍽️', 'success')
+    } catch {
+      toast('Failed to save replacement', 'error')
+    }
+  }
+
   const weekStart = getWeekStartDate(weekOffset)
   const dayMeals = plan?.days?.[selectedDay] as DayMeals | undefined
 
@@ -413,6 +446,7 @@ export default function MealPlanPage() {
                   day={selectedDay}
                   logStatus={mealLog[logKey]}
                   onSwap={(m, mt, d) => setSwapModal({ meal: m, mealType: mt, day: d })}
+                  onReplace={(m, mt, d) => setReplaceModal({ meal: m, mealType: mt, day: d })}
                   onLog={handleLogMeal}
                   onViewRecipe={(m, mt) => setRecipeModal({ meal: m, mealType: mt })}
                 />
@@ -437,6 +471,14 @@ export default function MealPlanPage() {
           meal={recipeModal.meal}
           mealType={recipeModal.mealType}
           onClose={() => setRecipeModal(null)}
+        />
+      )}
+
+      {replaceModal && (
+        <ReplaceMealModal
+          mealType={replaceModal.mealType}
+          onClose={() => setReplaceModal(null)}
+          onConfirm={handleReplaceMeal}
         />
       )}
     </AppShell>
