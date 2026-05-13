@@ -20,7 +20,7 @@ export function Sidebar() {
       <div className="px-6 py-8">
         {/* Logo */}
         <div className="flex items-center gap-3 mb-10">
-          <Image src="/leaf-logo.svg" alt="Vitalia" width={28} height={36} className="flex-shrink-0" />
+          <Image src="/leaf-logo.png" alt="Vitalia" width={28} height={29} className="flex-shrink-0" />
           <span className="text-sm font-black uppercase tracking-[2px] text-text-primary">VITALIA</span>
         </div>
 

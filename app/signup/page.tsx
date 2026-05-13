@@ -38,7 +38,7 @@ export default function SignupPage() {
       <div className="w-full max-w-[340px]">
         <div className="text-center mb-10">
           <div className="flex justify-center mb-4">
-            <Image src="/leaf-logo.svg" alt="Vitalia" width={48} height={62} />
+            <Image src="/leaf-logo.png" alt="Vitalia" width={48} height={50} />
           </div>
           <h1 className="font-black text-2xl tracking-[2px] uppercase text-text-primary">VITALIA</h1>
           <p className="text-text-secondary mt-2 text-sm">Start your personalized health journey</p>
