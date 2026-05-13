@@ -71,12 +71,6 @@ export function MealCard({ meal, mealType, day, logStatus, onSwap, onReplace, on
 
         {/* Links */}
         <div className="flex gap-4 mb-5 text-sm">
-          <button
-            onClick={() => onViewRecipe(meal, mealType)}
-            className="text-teal hover:text-accent-sage font-medium transition-colors"
-          >
-            View recipe →
-          </button>
           <details>
             <summary className="text-teal hover:text-accent-sage font-medium cursor-pointer transition-colors list-none">
               ▸ Why this meal?
