@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Great+Vibes&family=DM+Sans:wght@300;400;500;600;700&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -79,4 +79,107 @@ a {
   .btn-secondary:hover {
     background: rgba(201, 184, 255, 0.1);
   }
+}
+
+/* ── Vitalia Design System ─────────────────────────────────────── */
+
+.text-vitalia-gradient {
+  background: linear-gradient(135deg, #A8D5BA 0%, #D4C5E8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.btn-vitalia {
+  background: linear-gradient(135deg, #A8D5BA 0%, #9AC5AB 100%);
+  box-shadow: 0 4px 16px rgba(168, 213, 186, 0.2);
+  transition: background 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.btn-vitalia:hover {
+  background: linear-gradient(135deg, #98CBAA 0%, #88B99B 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(168, 213, 186, 0.3);
+}
+
+.btn-vitalia:active {
+  transform: translateY(0);
+}
+
+/* ── Keyframes ─────────────────────────────────────────────────── */
+
+@keyframes breathe {
+  0%, 100% { transform: scale(1); opacity: 0.6; }
+  50% { transform: scale(1.3); opacity: 0.2; }
+}
+
+@keyframes breatheRing2 {
+  0%, 100% { transform: scale(1); opacity: 0.3; }
+  50% { transform: scale(1.3); opacity: 0.08; }
+}
+
+@keyframes vitaliaFadeIn {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scrollBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+/* ── Animation utility classes ─────────────────────────────────── */
+
+.animate-breathe {
+  animation: breathe 4s ease-in-out infinite;
+}
+
+.animate-breathe-2 {
+  animation: breatheRing2 4s ease-in-out 0.5s infinite;
+}
+
+.animate-vitalia-in {
+  animation: vitaliaFadeIn 3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.animate-fade-in-up-1 {
+  animation: fadeInUp 2s ease-out 2s both;
+}
+
+.animate-fade-in-up-2 {
+  animation: fadeInUp 2s ease-out 2.3s both;
+}
+
+.animate-scroll-bounce {
+  animation: scrollBounce 3s ease-in-out infinite 3s;
+}
+
+/* ── Vitalia form inputs ────────────────────────────────────────── */
+
+.vitalia-input {
+  padding: 12px 14px;
+  background: white;
+  border: 1.5px solid #E8E6E3;
+  border-radius: 10px;
+  font-size: 14px;
+  font-family: 'DM Sans', sans-serif;
+  color: #2D2D3D;
+  width: 100%;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.vitalia-input::placeholder {
+  color: #D4C4D0;
+}
+
+.vitalia-input:focus {
+  outline: none;
+  border-color: #A8D5BA;
+  background: #FAFAF8;
+  box-shadow: 0 0 0 3px rgba(168, 213, 186, 0.1);
 }

@@ -16,6 +16,12 @@ module.exports = {
         'accent-yellow': '#FFE4A0',
         'text-primary': '#1A1A2E',
         'text-secondary': '#6B6B8A',
+        // Vitalia design system
+        'vitalia-sage': '#A8D5BA',
+        'vitalia-lavender': '#D4C5E8',
+        'vitalia-cream': '#FDFCFA',
+        'vitalia-muted': '#8B8B9A',
+        'vitalia-dim': '#C4C4D0',
       },
       borderRadius: {
         card: '20px',
@@ -26,6 +32,10 @@ module.exports = {
       },
       fontFamily: {
         sans: ['DM Sans', 'sans-serif'],
+        script: ['Great Vibes', 'cursive'],
+      },
+      backgroundImage: {
+        'vitalia-intro': 'linear-gradient(180deg, #FDFCFA 0%, #F9F8F6 50%, #F3F8F5 100%)',
       },
     },
   },
