@@ -153,7 +153,19 @@ export function WorkoutDayCard({ workout, day, logStatus, onSwap, onLog, onUpdat
 
       <div className="p-5 space-y-3">
         {workout.exercises?.map((exercise) => (
-          <ExerciseItem key={exercise.id} exercise={exercise} />
+          <ExerciseItem
+            key={exercise.id}
+            exercise={exercise}
+            onGifLoaded={onUpdate ? (exerciseId, gifUrl) => {
+              const updated = {
+                ...workout,
+                exercises: (workout.exercises || []).map((ex) =>
+                  ex.id === exerciseId ? { ...ex, gif_url: gifUrl } : ex
+                ),
+              }
+              onUpdate(day, updated)
+            } : undefined}
+          />
         ))}
 
         {onUpdate && (

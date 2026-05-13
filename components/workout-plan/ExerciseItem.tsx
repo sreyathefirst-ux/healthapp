@@ -1,31 +1,49 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { Dumbbell } from 'lucide-react'
 import { Exercise } from '@/types'
 
 interface ExerciseItemProps {
   exercise: Exercise
+  onGifLoaded?: (exerciseId: string, gifUrl: string) => void
 }
 
-export function ExerciseItem({ exercise }: ExerciseItemProps) {
+export function ExerciseItem({ exercise, onGifLoaded }: ExerciseItemProps) {
   const [expanded, setExpanded] = useState(false)
   const [gifUrl, setGifUrl] = useState<string | null>(exercise.gif_url || null)
   const [gifError, setGifError] = useState(false)
   const [gifLoading, setGifLoading] = useState(false)
 
   useEffect(() => {
+    // If gif_url is already stored (from Supabase cache), skip the API call
+    if (exercise.gif_url) {
+      console.log('[ExerciseItem] using cached gif_url for', exercise.name, '→', exercise.gif_url.slice(0, 80))
+      setGifUrl(exercise.gif_url)
+      return
+    }
     if (gifUrl || gifError) return
+
+    console.log('[ExerciseItem] fetching gif for:', exercise.name)
     setGifLoading(true)
     fetch(`/api/exercises/gif?name=${encodeURIComponent(exercise.name)}`)
       .then((r) => r.json())
       .then((d) => {
-        if (d.gif_url) setGifUrl(d.gif_url)
-        else setGifError(true)
+        console.log('[ExerciseItem] API response for', exercise.name, '→', d.gif_url ?? 'null')
+        if (d.gif_url) {
+          setGifUrl(d.gif_url)
+          onGifLoaded?.(exercise.id, d.gif_url)
+        } else {
+          setGifError(true)
+        }
       })
-      .catch(() => setGifError(true))
+      .catch((err) => {
+        console.error('[ExerciseItem] fetch failed for', exercise.name, ':', err)
+        setGifError(true)
+      })
       .finally(() => setGifLoading(false))
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [exercise.name])
+  }, [exercise.name, exercise.gif_url])
 
   return (
     <div className="p-4 bg-bg rounded-xl space-y-2">
@@ -47,7 +65,7 @@ export function ExerciseItem({ exercise }: ExerciseItemProps) {
           </div>
         </div>
 
-        <div className="w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden bg-bg flex items-center justify-center">
+        <div className="w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden bg-bg-2 flex items-center justify-center">
           {gifLoading ? (
             <div className="skeleton-shimmer w-full h-full" />
           ) : gifUrl && !gifError ? (
@@ -55,10 +73,21 @@ export function ExerciseItem({ exercise }: ExerciseItemProps) {
               src={gifUrl}
               alt={exercise.name}
               className="w-full h-full object-cover"
-              onError={() => setGifError(true)}
+              onError={() => {
+                console.error('[ExerciseItem] image load failed for', exercise.name, '| url:', gifUrl?.slice(0, 80))
+                setGifError(true)
+              }}
             />
           ) : (
-            <span className="text-2xl">💪</span>
+            // Clean fallback: dumbbell icon + sets×reps, no emoji
+            <div className="flex flex-col items-center justify-center gap-0.5 w-full h-full bg-bg-3">
+              <Dumbbell size={20} className="text-vitalia-muted" />
+              {exercise.sets && exercise.reps && (
+                <span className="text-[9px] font-semibold text-vitalia-muted leading-none">
+                  {exercise.sets}×{exercise.reps}
+                </span>
+              )}
+            </div>
           )}
         </div>
       </div>
