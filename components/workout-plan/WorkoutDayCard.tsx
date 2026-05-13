@@ -1,11 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { Badge } from '@/components/ui/Badge'
-import { Button } from '@/components/ui/Button'
 import { ExerciseItem } from './ExerciseItem'
 import { WorkoutDay, WorkoutLogStatus, Exercise } from '@/types'
-import { RefreshCw, Plus, Check, X, ChevronDown } from 'lucide-react'
+import { RefreshCw, Plus, Check, X, ChevronDown, Dumbbell, Clock } from 'lucide-react'
 
 interface WorkoutDayCardProps {
   workout: WorkoutDay
@@ -16,6 +14,7 @@ interface WorkoutDayCardProps {
   onUpdate?: (day: string, updated: WorkoutDay) => void
 }
 
+const locationLabel: Record<string, string> = { gym: 'Gym', home: 'Home', class: 'Class' }
 const locationEmoji: Record<string, string> = { gym: '🏋️', home: '🏠', class: '🧘' }
 const LOCATION_OPTIONS: NonNullable<WorkoutDay['location']>[] = ['gym', 'home', 'class']
 
@@ -68,16 +67,18 @@ export function WorkoutDayCard({ workout, day, logStatus, onSwap, onLog, onUpdat
     setShowTypeMenu(false)
   }
 
-  const logButtons: { status: WorkoutLogStatus; label: string; title: string }[] = [
-    { status: 'completed', label: '✅', title: 'Completed' },
-    { status: 'modified', label: '⚡', title: 'Modified' },
-    { status: 'skipped', label: '❌', title: 'Skipped' },
-  ]
+  function handleRemoveExercise(exerciseId: string) {
+    if (!onUpdate) return
+    onUpdate(day, {
+      ...workout,
+      exercises: (workout.exercises || []).filter((ex) => ex.id !== exerciseId),
+    })
+  }
 
   if (workout.type === 'rest') {
     return (
-      <div className="bg-white rounded-card shadow-card overflow-hidden">
-        <div className="p-6 text-center">
+      <div className="bg-white rounded-2xl shadow-sm border border-vitalia-border overflow-hidden">
+        <div className="p-8 text-center">
           <div className="text-5xl mb-3">🧘</div>
           <h3 className="font-bold text-text-primary text-lg mb-2">Rest Day</h3>
           {workout.recovery_note && (
@@ -85,10 +86,10 @@ export function WorkoutDayCard({ workout, day, logStatus, onSwap, onLog, onUpdat
           )}
         </div>
         {onUpdate && (
-          <div className="px-5 pb-5 flex justify-center">
+          <div className="px-5 pb-6 flex justify-center">
             <button
               onClick={() => handleChangeType('workout')}
-              className="text-sm text-accent-primary font-medium hover:underline flex items-center gap-1"
+              className="text-sm text-teal font-medium hover:underline flex items-center gap-1"
             >
               <RefreshCw size={13} /> Switch to workout day
             </button>
@@ -99,79 +100,101 @@ export function WorkoutDayCard({ workout, day, logStatus, onSwap, onLog, onUpdat
   }
 
   return (
-    <div className="bg-white rounded-card shadow-card overflow-hidden">
-      <div className="p-5 border-b border-vitalia-border">
-        <div className="flex items-start justify-between mb-3">
-          <h3 className="font-bold text-text-primary text-lg">{workout.workout_name}</h3>
-          {onUpdate && (
-            <div className="relative">
-              <button
-                onClick={() => setShowTypeMenu(!showTypeMenu)}
-                className="flex items-center gap-1 text-xs text-text-secondary hover:text-text-primary px-2 py-1 rounded-lg hover:bg-bg transition-colors"
-              >
-                Edit <ChevronDown size={12} />
-              </button>
-              {showTypeMenu && (
-                <>
-                  <div className="fixed inset-0 z-10" onClick={() => setShowTypeMenu(false)} />
-                  <div className="absolute right-0 top-full mt-1 bg-white rounded-xl shadow-card border border-vitalia-border z-20 min-w-[160px]">
-                    <button
-                      onClick={() => handleChangeType('rest')}
-                      className="block w-full text-left px-3 py-2 text-sm hover:bg-bg transition-colors rounded-t-xl text-text-primary"
-                    >
-                      🛌 Make rest day
-                    </button>
-                    <div className="border-t border-vitalia-border px-3 py-2">
-                      <p className="text-xs text-text-secondary font-medium mb-1.5">Location</p>
-                      <div className="flex flex-col gap-1">
-                        {LOCATION_OPTIONS.map((loc) => (
-                          <button
-                            key={loc}
-                            onClick={() => handleChangeLocation(loc)}
-                            className={`text-xs px-2 py-1.5 rounded-lg transition-colors text-left ${workout.location === loc ? 'bg-accent-primary/20 text-text-primary font-medium' : 'hover:bg-bg text-text-secondary'}`}
-                          >
-                            {locationEmoji[loc]} {loc.charAt(0).toUpperCase() + loc.slice(1)}
-                          </button>
-                        ))}
-                      </div>
+    <div className="space-y-4">
+      {/* Workout header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h3 className="text-2xl font-bold text-text-primary mb-3">
+            {workout.workout_name}
+          </h3>
+          <div className="flex flex-wrap gap-3">
+            {workout.location && (
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 rounded-lg border border-green-200">
+                <Dumbbell size={16} className="text-green-600" />
+                <span className="font-medium text-text-primary text-sm">
+                  {locationLabel[workout.location] ?? workout.location}
+                </span>
+              </div>
+            )}
+            {workout.duration_mins && (
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-50 rounded-lg border border-purple-200">
+                <Clock size={16} className="text-lavender" />
+                <span className="font-medium text-text-primary text-sm">{workout.duration_mins} min</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Edit menu */}
+        {onUpdate && (
+          <div className="relative self-start">
+            <button
+              onClick={() => setShowTypeMenu(!showTypeMenu)}
+              className="flex items-center gap-1.5 px-4 py-2 border border-vitalia-border rounded-lg text-text-secondary hover:bg-bg-2 transition-colors text-sm font-medium"
+            >
+              Edit <ChevronDown size={14} />
+            </button>
+            {showTypeMenu && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setShowTypeMenu(false)} />
+                <div className="absolute right-0 top-full mt-1 bg-white rounded-xl shadow-card-lg border border-vitalia-border z-20 min-w-[180px]">
+                  <button
+                    onClick={() => handleChangeType('rest')}
+                    className="block w-full text-left px-4 py-2.5 text-sm hover:bg-bg-2 transition-colors rounded-t-xl text-text-primary"
+                  >
+                    🛌 Make rest day
+                  </button>
+                  <div className="border-t border-vitalia-border px-4 py-3">
+                    <p className="text-xs text-text-secondary font-semibold mb-2">Location</p>
+                    <div className="flex flex-col gap-1">
+                      {LOCATION_OPTIONS.map((loc) => (
+                        <button
+                          key={loc}
+                          onClick={() => handleChangeLocation(loc)}
+                          className={`text-sm px-2 py-1.5 rounded-lg transition-colors text-left ${
+                            workout.location === loc
+                              ? 'bg-teal/15 text-text-primary font-medium'
+                              : 'hover:bg-bg-2 text-text-secondary'
+                          }`}
+                        >
+                          {locationEmoji[loc]} {locationLabel[loc]}
+                        </button>
+                      ))}
                     </div>
                   </div>
-                </>
-              )}
-            </div>
-          )}
-        </div>
-        <div className="flex gap-2 flex-wrap">
-          {workout.location && (
-            <Badge color="primary">{locationEmoji[workout.location]} {workout.location}</Badge>
-          )}
-          {workout.duration_mins && (
-            <Badge color="sage">⏱️ {workout.duration_mins} min</Badge>
-          )}
-        </div>
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
-      <div className="p-5 space-y-3">
-        {workout.exercises?.map((exercise) => (
+      {/* Exercise cards */}
+      <div className="space-y-4">
+        {workout.exercises?.map((exercise, i) => (
           <ExerciseItem
             key={exercise.id}
             exercise={exercise}
+            index={i}
+            onRemove={onUpdate ? () => handleRemoveExercise(exercise.id) : undefined}
             onGifLoaded={onUpdate ? (exerciseId, gifUrl) => {
-              const updated = {
+              onUpdate(day, {
                 ...workout,
                 exercises: (workout.exercises || []).map((ex) =>
                   ex.id === exerciseId ? { ...ex, gif_url: gifUrl } : ex
                 ),
-              }
-              onUpdate(day, updated)
+              })
             } : undefined}
           />
         ))}
+      </div>
 
-        {onUpdate && (
-          showAddExercise ? (
-            <div className="p-3 bg-accent-primary/5 border border-accent-primary/20 rounded-xl space-y-2">
-              <p className="text-xs font-medium text-text-primary">Add custom exercise</p>
+      {/* Add exercise */}
+      {onUpdate && (
+        <div className="pt-2 border-t border-vitalia-border">
+          {showAddExercise ? (
+            <div className="p-4 bg-teal/5 border border-teal/20 rounded-xl space-y-3">
+              <p className="text-sm font-medium text-text-primary">Add custom exercise</p>
               <input
                 type="text"
                 value={newName}
@@ -179,7 +202,7 @@ export function WorkoutDayCard({ workout, day, logStatus, onSwap, onLog, onUpdat
                 onKeyDown={(e) => e.key === 'Enter' && handleAddExercise()}
                 autoFocus
                 placeholder="Exercise name (e.g. Hip Thrust)"
-                className="w-full px-3 py-2 text-sm rounded-lg border border-vitalia-border focus:outline-none focus:border-accent-primary"
+                className="w-full px-3 py-2 text-sm rounded-lg border border-vitalia-border focus:outline-none focus:border-teal"
               />
               <div className="flex gap-2">
                 {[
@@ -189,16 +212,27 @@ export function WorkoutDayCard({ workout, day, logStatus, onSwap, onLog, onUpdat
                 ].map(({ label, val, set }) => (
                   <div key={label} className="flex-1">
                     <label className="text-xs text-text-secondary block mb-0.5">{label}</label>
-                    <input type="number" value={val} onChange={(e) => set(e.target.value)} min={0}
-                      className="w-full px-2 py-1.5 text-sm rounded-lg border border-vitalia-border focus:outline-none focus:border-accent-primary" />
+                    <input
+                      type="number"
+                      value={val}
+                      onChange={(e) => set(e.target.value)}
+                      min={0}
+                      className="w-full px-2 py-1.5 text-sm rounded-lg border border-vitalia-border focus:outline-none focus:border-teal"
+                    />
                   </div>
                 ))}
               </div>
               <div className="flex gap-2">
-                <button onClick={handleAddExercise} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-accent-primary/20 hover:bg-accent-primary/30 text-sm font-medium text-text-primary transition-colors">
+                <button
+                  onClick={handleAddExercise}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-teal/20 hover:bg-teal/30 text-sm font-medium text-text-primary transition-colors"
+                >
                   <Check size={13} /> Add
                 </button>
-                <button onClick={() => setShowAddExercise(false)} className="flex items-center gap-1 px-3 py-1.5 rounded-lg hover:bg-bg text-sm text-text-secondary transition-colors">
+                <button
+                  onClick={() => setShowAddExercise(false)}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg hover:bg-bg-2 text-sm text-text-secondary transition-colors"
+                >
                   <X size={13} /> Cancel
                 </button>
               </div>
@@ -206,31 +240,42 @@ export function WorkoutDayCard({ workout, day, logStatus, onSwap, onLog, onUpdat
           ) : (
             <button
               onClick={() => setShowAddExercise(true)}
-              className="flex items-center gap-1.5 text-sm text-accent-primary font-medium hover:underline"
+              className="flex items-center gap-2 text-teal hover:text-accent-sage font-medium text-sm transition-colors mt-2"
             >
-              <Plus size={14} /> Add exercise
+              <Plus size={16} /> Add exercise
             </button>
-          )
-        )}
-      </div>
-
-      <div className="p-5 border-t border-vitalia-border flex items-center justify-between">
-        <div className="flex gap-1">
-          {logButtons.map(({ status, label, title }) => (
-            <button
-              key={status}
-              onClick={() => onLog(day, logStatus === status ? null : status)}
-              className={`w-10 h-10 rounded-xl text-lg transition-all ${logStatus === status ? 'bg-accent-primary/20 ring-2 ring-accent-primary' : 'hover:bg-bg'}`}
-              title={title}
-            >
-              {label}
-            </button>
-          ))}
+          )}
         </div>
-        <Button variant="ghost" size="sm" onClick={() => onSwap(workout, day)}>
-          <RefreshCw size={14} />
-          Swap workout
-        </Button>
+      )}
+
+      {/* Bottom actions */}
+      <div className="flex flex-wrap gap-3 pt-2">
+        <button
+          onClick={() => onLog(day, logStatus === 'completed' ? null : 'completed')}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-lg border-2 font-medium text-sm transition-colors ${
+            logStatus === 'completed'
+              ? 'bg-green-100 border-green-500 text-green-700'
+              : 'bg-green-50 border-green-500 text-green-700 hover:bg-green-100'
+          }`}
+        >
+          ✓ {logStatus === 'completed' ? 'Completed!' : 'Complete'}
+        </button>
+        <button
+          onClick={() => onLog(day, logStatus === 'modified' ? null : 'modified')}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-lg border font-medium text-sm transition-colors ${
+            logStatus === 'modified'
+              ? 'bg-orange-100 border-orange-400 text-orange-700'
+              : 'bg-bg-2 border-vitalia-border text-text-secondary hover:bg-bg-3'
+          }`}
+        >
+          ⚡ Modified
+        </button>
+        <button
+          onClick={() => onSwap(workout, day)}
+          className="flex items-center gap-2 px-5 py-2.5 rounded-lg border border-vitalia-border bg-bg-2 text-text-secondary hover:bg-bg-3 font-medium text-sm transition-colors"
+        >
+          <RefreshCw size={14} /> Swap workout
+        </button>
       </div>
     </div>
   )

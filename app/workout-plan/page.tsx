@@ -209,25 +209,36 @@ export default function WorkoutPlanPage() {
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-text-primary">Workout Plan</h1>
           {plan && (
-            <Button variant="secondary" size="sm" onClick={() => handleGenerate()} loading={generating}>
-              <RefreshCw size={14} />
+            <button
+              onClick={() => handleGenerate()}
+              disabled={generating}
+              className="flex items-center gap-2 px-4 py-2 rounded-full border-2 border-lavender text-lavender hover:bg-lavender/10 transition-colors font-medium text-sm disabled:opacity-50"
+            >
+              <RefreshCw size={16} className={generating ? 'animate-spin' : ''} />
               Regenerate
-            </Button>
+            </button>
           )}
         </div>
 
         {/* Week selector */}
         <div className="flex items-center gap-4">
-          <button onClick={() => setWeekOffset((o) => o - 1)} className="p-2 rounded-xl hover:bg-white transition-colors">
-            <ChevronLeft size={20} />
+          <button
+            onClick={() => setWeekOffset((o) => o - 1)}
+            className="p-2 rounded-lg hover:bg-bg-2 transition-colors text-text-secondary"
+          >
+            <ChevronLeft size={22} />
           </button>
           <div className="flex-1 text-center">
-            <p className="font-semibold text-text-primary">
+            <p className="font-bold text-text-primary">
               Week of {new Date(weekStart + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}
             </p>
           </div>
-          <button onClick={() => setWeekOffset((o) => Math.min(0, o + 1))} disabled={weekOffset === 0} className="p-2 rounded-xl hover:bg-white transition-colors">
-            <ChevronRight size={20} className={weekOffset === 0 ? 'opacity-30' : ''} />
+          <button
+            onClick={() => setWeekOffset((o) => Math.min(0, o + 1))}
+            disabled={weekOffset === 0}
+            className="p-2 rounded-lg hover:bg-bg-2 transition-colors text-text-secondary disabled:opacity-30"
+          >
+            <ChevronRight size={22} />
           </button>
         </div>
 
@@ -242,13 +253,17 @@ export default function WorkoutPlanPage() {
                 <button
                   key={day}
                   onClick={() => setSelectedDay(day)}
-                  className={`flex-shrink-0 px-4 py-2 rounded-xl text-sm font-medium transition-all relative ${
-                    selectedDay === day ? 'bg-accent-primary text-text-primary' : 'bg-white text-text-secondary hover:bg-accent-primary/10'
+                  className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all relative ${
+                    selectedDay === day
+                      ? 'bg-gradient-to-r from-teal to-accent-sage text-white shadow-sm'
+                      : 'bg-white text-text-secondary hover:bg-bg-2 border border-vitalia-border'
                   }`}
                 >
                   {DAY_LABELS[i]}
-                  {isRest && <span className="text-xs block">🧘</span>}
-                  {isLogged && !isRest && <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full" />}
+                  {isRest && <span className="text-xs block leading-none">🧘</span>}
+                  {isLogged && !isRest && (
+                    <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full" />
+                  )}
                 </button>
               )
             })}
