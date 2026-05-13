@@ -15,13 +15,13 @@ export function TodaySummaryCard() {
   const [workoutStatus, setWorkoutStatus] = useState<string>('Checking...')
 
   useEffect(() => {
+    const today = new Date().toISOString().split('T')[0]
+    const dayOfWeek = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()
+
     async function fetchTodaySummary() {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { setLoading(false); return }
-
-      const today = new Date().toISOString().split('T')[0]
-      const dayOfWeek = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()
 
       const [logRes, routineRes, planRes] = await Promise.all([
         supabase.from('daily_logs').select('*').eq('user_id', user.id).eq('date', today).maybeSingle(),
@@ -39,17 +39,16 @@ export function TodaySummaryCard() {
       setMorningChecked(log?.morning_items_checked?.length || 0)
 
       const mealLog = log?.meal_log as Record<string, string> | null
-      if (mealLog) {
-        const loggedMeals = Object.values(mealLog).filter((v) => v === 'eaten' || v === 'swapped').length
-        setMealsLogged(loggedMeals)
-      }
+      const todayPrefix = dayOfWeek + '_'
+      const loggedMeals = mealLog
+        ? Object.entries(mealLog).filter(([k, v]) => k.startsWith(todayPrefix) && (v === 'eaten' || v === 'swapped')).length
+        : 0
+      setMealsLogged(loggedMeals)
 
       const workoutPlan = planRes.data?.workout_plan as Record<string, unknown> | null
       if (workoutPlan && (workoutPlan as { days?: Record<string, unknown> }).days) {
         const dayPlan = (workoutPlan as { days: Record<string, Record<string, unknown>> }).days[dayOfWeek]
-        if (!dayPlan) {
-          setWorkoutStatus('Rest day 🧘')
-        } else if (dayPlan.type === 'rest') {
+        if (!dayPlan || dayPlan.type === 'rest') {
           setWorkoutStatus('Rest day 🧘')
         } else if (log?.workout_log && (log.workout_log as Record<string, string>)[dayOfWeek] === 'completed') {
           setWorkoutStatus('Done ✅')
@@ -62,7 +61,15 @@ export function TodaySummaryCard() {
 
       setLoading(false)
     }
+
     fetchTodaySummary()
+
+    // Re-fetch whenever the tab regains focus (catches navigate-back scenario)
+    function handleVisibility() {
+      if (document.visibilityState === 'visible') fetchTodaySummary()
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => document.removeEventListener('visibilitychange', handleVisibility)
   }, [])
 
   if (loading) {

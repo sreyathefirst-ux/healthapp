@@ -116,7 +116,7 @@ export default function WorkoutPlanPage() {
         date: today,
         workout_log: newLog,
         last_seen_at: new Date().toISOString(),
-      })
+      }, { onConflict: 'user_id,date' })
     } catch {
       toast('Failed to save log', 'error')
     }

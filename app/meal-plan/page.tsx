@@ -237,7 +237,7 @@ export default function MealPlanPage() {
         date: today,
         meal_log: newLog,
         last_seen_at: new Date().toISOString(),
-      })
+      }, { onConflict: 'user_id,date' })
     } catch {
       toast('Failed to save log', 'error')
     }
