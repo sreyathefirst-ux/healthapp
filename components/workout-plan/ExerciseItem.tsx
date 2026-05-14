@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Dumbbell, X, Check, Play } from 'lucide-react'
+import React, { useState, useEffect, useRef } from 'react'
+import { Dumbbell, Check, X } from 'lucide-react'
 import { Exercise } from '@/types'
 
 interface ExerciseItemProps {
@@ -12,23 +12,51 @@ interface ExerciseItemProps {
   onRemove?: () => void
 }
 
-export function ExerciseItem({ exercise, index, gender, onVideoLoaded, onRemove }: ExerciseItemProps) {
-  const [videoId, setVideoId] = useState<string | null>(null)
-  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null)
-  const [videoTitle, setVideoTitle] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
+// Only re-render when exercise identity, name, gender, or index actually changes.
+// Intentionally excludes exercise.video_id so that onVideoLoaded updating the
+// exercise object in Supabase does NOT trigger a re-render → breaks the fetch loop.
+function arePropsEqual(prev: ExerciseItemProps, next: ExerciseItemProps) {
+  return (
+    prev.exercise.id === next.exercise.id &&
+    prev.exercise.name === next.exercise.name &&
+    prev.gender === next.gender &&
+    prev.index === next.index
+  )
+}
+
+export const ExerciseItem = React.memo(function ExerciseItem({
+  exercise,
+  index,
+  gender,
+  onVideoLoaded,
+  onRemove,
+}: ExerciseItemProps) {
+  // Seed state from Supabase cache on first render if gender matches
+  const hasCached = !!exercise.video_id && exercise.video_gender === gender
+  const [videoId, setVideoId] = useState<string | null>(hasCached ? exercise.video_id! : null)
+  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(hasCached ? (exercise.thumbnail_url ?? null) : null)
+  const [loading, setLoading] = useState(!hasCached)
   const [playing, setPlaying] = useState(false)
+  const [videoError, setVideoError] = useState(false)
   const [expanded, setExpanded] = useState(false)
   const [checked, setChecked] = useState(false)
 
-  useEffect(() => {
-    setPlaying(false)
+  // Tracks which name::gender combo we last fetched — prevents duplicate calls
+  const fetchedKey = useRef(hasCached ? `${exercise.name}::${gender}` : '')
 
-    // Use Supabase-cached values if they match the current gender
-    if (exercise.video_id && exercise.thumbnail_url && exercise.video_gender === gender) {
+  useEffect(() => {
+    const key = `${exercise.name}::${gender}`
+    if (fetchedKey.current === key) return // already loaded for this combo
+    fetchedKey.current = key
+
+    setPlaying(false)
+    setVideoError(false)
+
+    // Use Supabase-cached data if it matches current gender
+    if (exercise.video_id && exercise.video_gender === gender) {
       setVideoId(exercise.video_id)
-      setThumbnailUrl(exercise.thumbnail_url)
-      setVideoTitle(null)
+      setThumbnailUrl(exercise.thumbnail_url ?? null)
+      setLoading(false)
       return
     }
 
@@ -42,14 +70,15 @@ export function ExerciseItem({ exercise, index, gender, onVideoLoaded, onRemove 
         if (d.videoId) {
           setVideoId(d.videoId)
           setThumbnailUrl(d.thumbnailUrl ?? null)
-          setVideoTitle(d.title ?? null)
+          // Save to Supabase via parent — captured via closure at call time
           onVideoLoaded?.(exercise.id, d.videoId, d.thumbnailUrl ?? '', gender)
         }
+        // If null: stay with null, fallback placeholder renders
       })
-      .catch(() => {/* silent — fallback placeholder shown */})
+      .catch(() => { /* silent — fallback shows */ })
       .finally(() => setLoading(false))
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [exercise.name, gender, exercise.video_id, exercise.video_gender])
+  }, [exercise.name, gender])
 
   const restLabel = exercise.rest_seconds
     ? exercise.rest_seconds >= 60
@@ -59,65 +88,98 @@ export function ExerciseItem({ exercise, index, gender, onVideoLoaded, onRemove 
 
   return (
     <div
-      className="bg-white rounded-2xl overflow-hidden hover:shadow-md transition-shadow"
-      style={{ border: '1px solid #EBEBF0' }}
+      className="bg-white rounded-2xl overflow-hidden hover:shadow-md transition-shadow mb-3"
+      style={{ border: '1px solid #EBEBF0', borderRadius: 16 }}
     >
-      {/* ── Video / thumbnail area ── */}
-      <div className="relative overflow-hidden" style={{ height: 200, borderRadius: '16px 16px 0 0' }}>
+      {/* ── Video area ── */}
+      <div style={{ position: 'relative', height: 200, background: '#F8F9FA', borderRadius: '16px 16px 0 0', overflow: 'hidden' }}>
+
         {loading ? (
           /* Loading skeleton */
-          <div className="w-full h-full bg-slate-100 flex items-center justify-center animate-pulse">
+          <div className="w-full h-full flex items-center justify-center animate-pulse bg-slate-100">
             <Dumbbell size={28} className="text-slate-300" />
           </div>
-        ) : playing && videoId ? (
-          /* YouTube embed */
-          <iframe
-            src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=0&modestbranding=1&rel=0`}
-            width="100%"
-            height="200"
-            style={{ border: 'none', display: 'block' }}
-            allow="autoplay; encrypted-media"
-            allowFullScreen
-            title={exercise.name}
-          />
-        ) : videoId && thumbnailUrl ? (
-          /* Thumbnail with play button overlay */
+
+        ) : playing && videoId && !videoError ? (
+          /* ── YouTube embed ── */
+          <div className="relative w-full h-full" style={{ height: 220 }}>
+            <iframe
+              key={videoId}
+              src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=1&modestbranding=1&rel=0&showinfo=0`}
+              width="100%"
+              height="220"
+              style={{ border: 'none', display: 'block', borderRadius: '16px 16px 0 0', opacity: 1, transition: 'opacity 0.3s ease' }}
+              allow="autoplay; encrypted-media"
+              allowFullScreen
+              title={exercise.name}
+              onError={() => { setVideoError(true); setPlaying(false) }}
+            />
+            <button
+              onClick={() => setPlaying(false)}
+              className="absolute top-2 right-2 z-20 w-8 h-8 rounded-full flex items-center justify-center"
+              style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)' }}
+              aria-label="Close video"
+            >
+              <X size={14} className="text-white" />
+            </button>
+          </div>
+
+        ) : videoId && thumbnailUrl && !videoError ? (
+          /* ── Thumbnail with play button ── */
           <button
             className="w-full h-full relative block focus:outline-none group"
             onClick={() => setPlaying(true)}
+            style={{ height: 200 }}
             aria-label={`Play ${exercise.name} tutorial`}
           >
             <img
               src={thumbnailUrl}
               alt={exercise.name}
               className="w-full h-full object-cover"
+              style={{ display: 'block' }}
+              onError={() => setVideoError(true)}
             />
-            {/* Dark overlay */}
-            <div className="absolute inset-0 bg-black/15 group-hover:bg-black/30 transition-colors" />
-            {/* Play button */}
+            {/* Gradient overlay */}
             <div
-              className="absolute inset-0 flex items-center justify-center"
-              aria-hidden
-            >
+              className="absolute inset-0 transition-opacity"
+              style={{
+                background: 'linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.30) 100%)',
+                opacity: 1,
+              }}
+            />
+            {/* Play button */}
+            <div className="absolute inset-0 flex items-center justify-center">
               <div
-                className="flex items-center justify-center rounded-full bg-white shadow-lg group-hover:scale-105 transition-transform"
-                style={{ width: 48, height: 48 }}
+                className="flex items-center justify-center rounded-full bg-white shadow-lg transition-transform group-hover:scale-110"
+                style={{ width: 52, height: 52 }}
               >
-                <Play size={20} className="text-slate-800 fill-slate-800 ml-1" />
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="ml-1">
+                  <polygon points="4,2 18,10 4,18" fill="#1A1A2E" />
+                </svg>
               </div>
             </div>
           </button>
+
         ) : (
-          /* Fallback — no video found */
-          <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-white">
-            <div className="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center">
-              <Dumbbell size={24} className="text-slate-400" />
+          /* ── Fallback placeholder ── */
+          <div
+            className="w-full h-full flex flex-col items-center justify-center gap-3"
+            style={{ background: '#fff' }}
+          >
+            <div
+              className="w-14 h-14 rounded-full flex items-center justify-center"
+              style={{ background: 'rgba(93,218,184,0.12)' }}
+            >
+              <Dumbbell size={26} style={{ color: '#5DDAB8' }} />
             </div>
-            <span className="text-base font-semibold text-center px-6 text-slate-700" style={{ fontFamily: 'DM Sans, sans-serif' }}>
+            <span
+              className="text-center px-6"
+              style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: 16, color: '#1A1A2E' }}
+            >
               {exercise.name}
             </span>
             {exercise.sets && exercise.reps && (
-              <span className="text-sm text-slate-400" style={{ fontFamily: 'DM Sans, sans-serif' }}>
+              <span style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 400, fontSize: 14, color: '#6B6B8A' }}>
                 {exercise.sets} sets × {exercise.reps} reps
               </span>
             )}
@@ -126,43 +188,33 @@ export function ExerciseItem({ exercise, index, gender, onVideoLoaded, onRemove 
 
         {/* Exercise number badge */}
         {!playing && (
-          <div className="absolute top-3 left-3 bg-black/50 text-white text-xs font-semibold px-2.5 py-1 rounded-full backdrop-blur-sm z-10">
+          <div
+            className="absolute top-3 left-3 text-white text-xs font-semibold px-2.5 py-1 rounded-full"
+            style={{ background: 'rgba(0,0,0,0.50)', backdropFilter: 'blur(4px)', zIndex: 10 }}
+          >
             #{index + 1}
           </div>
         )}
 
         {/* Gender badge */}
-        {!playing && videoId && (
+        {!playing && (videoId && !videoError) && (
           <div
-            className={`absolute top-3 right-3 text-white text-xs font-semibold px-2.5 py-1 rounded-full backdrop-blur-sm z-10 ${
-              gender === 'female' ? 'bg-pink-500/70' : 'bg-blue-500/70'
-            }`}
+            className="absolute top-3 right-3 text-white text-xs font-semibold px-2.5 py-1 rounded-full"
+            style={{
+              background: gender === 'female' ? 'rgba(236,72,153,0.70)' : 'rgba(59,130,246,0.70)',
+              backdropFilter: 'blur(4px)',
+              zIndex: 10,
+            }}
           >
             {gender === 'female' ? '♀ Female' : '♂ Male'}
           </div>
         )}
-
-        {/* Collapse button when playing */}
-        {playing && (
-          <button
-            onClick={() => setPlaying(false)}
-            className="absolute top-2 right-2 z-20 w-8 h-8 rounded-full bg-black/50 hover:bg-black/70 flex items-center justify-center backdrop-blur-sm transition-colors"
-            aria-label="Close video"
-          >
-            <X size={14} className="text-white" />
-          </button>
-        )}
       </div>
 
       {/* YouTube attribution — required by ToS */}
-      {(playing || videoId) && (
-        <div className="px-5 pt-1.5 pb-0 flex items-center gap-1">
+      {(videoId && !videoError) && (
+        <div className="px-5 pt-1.5 flex items-center gap-1">
           <span style={{ fontSize: 10, color: '#9B9BAA' }}>via YouTube</span>
-          {videoTitle && !playing && (
-            <span className="truncate" style={{ fontSize: 10, color: '#9B9BAA' }}>
-              · {videoTitle}
-            </span>
-          )}
         </div>
       )}
 
@@ -170,7 +222,6 @@ export function ExerciseItem({ exercise, index, gender, onVideoLoaded, onRemove 
       <div className="p-5">
         <h3 className="text-lg font-bold text-text-primary mb-3">{exercise.name}</h3>
 
-        {/* Specs chips */}
         <div className="flex flex-wrap gap-2 mb-4">
           {exercise.sets && (
             <div className="px-3 py-1.5 bg-blue-50 rounded-lg border border-blue-200">
@@ -200,7 +251,6 @@ export function ExerciseItem({ exercise, index, gender, onVideoLoaded, onRemove 
           )}
         </div>
 
-        {/* Why this exercise */}
         <button
           onClick={() => setExpanded(!expanded)}
           className="text-teal hover:text-accent-sage font-medium text-sm flex items-center gap-1 mb-3 transition-colors"
@@ -213,7 +263,6 @@ export function ExerciseItem({ exercise, index, gender, onVideoLoaded, onRemove 
           </p>
         )}
 
-        {/* Actions */}
         <div className="flex items-center gap-2 pt-1 border-t border-slate-100">
           <button
             onClick={() => setChecked(!checked)}
@@ -239,4 +288,4 @@ export function ExerciseItem({ exercise, index, gender, onVideoLoaded, onRemove 
       </div>
     </div>
   )
-}
+}, arePropsEqual)
