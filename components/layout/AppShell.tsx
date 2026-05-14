@@ -3,6 +3,7 @@
 import { ReactNode } from 'react'
 import { Sidebar } from './Sidebar'
 import { BottomNav } from './BottomNav'
+import { VitaChat } from './VitaChat'
 import { ToastProvider } from '@/components/ui/Toast'
 
 interface AppShellProps {
@@ -20,6 +21,7 @@ export function AppShell({ children }: AppShellProps) {
           </div>
         </main>
         <BottomNav />
+        <VitaChat />
       </div>
     </ToastProvider>
   )
