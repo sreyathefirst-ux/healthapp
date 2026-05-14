@@ -52,6 +52,10 @@ export interface Exercise {
   rest_seconds?: number
   reasoning: string
   gif_url?: string
+  // YouTube video cache — keyed by gender so switching gender re-fetches
+  video_id?: string | null
+  thumbnail_url?: string | null
+  video_gender?: 'male' | 'female'
 }
 
 export interface WorkoutDay {

@@ -294,11 +294,13 @@ export function WorkoutDayCard({ workout, day, logStatus, onSwap, onLog, onUpdat
                 index={i}
                 gender={gender}
                 onRemove={onUpdate ? () => handleRemoveExercise(exercise.id) : undefined}
-                onGifLoaded={onUpdate ? (exerciseId, gifUrl) => {
+                onVideoLoaded={onUpdate ? (exerciseId, videoId, thumbnailUrl, videoGender) => {
                   onUpdate(day, {
                     ...workout,
                     exercises: (workout.exercises || []).map((ex) =>
-                      ex.id === exerciseId ? { ...ex, gif_url: gifUrl } : ex
+                      ex.id === exerciseId
+                        ? { ...ex, video_id: videoId, thumbnail_url: thumbnailUrl, video_gender: videoGender }
+                        : ex
                     ),
                   })
                 } : undefined}

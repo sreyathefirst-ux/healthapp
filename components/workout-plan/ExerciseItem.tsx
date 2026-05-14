@@ -1,71 +1,55 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
-import { Play, X, Check } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Dumbbell, X, Check, Play } from 'lucide-react'
 import { Exercise } from '@/types'
 
 interface ExerciseItemProps {
   exercise: Exercise
   index: number
   gender: 'male' | 'female'
-  onGifLoaded?: (exerciseId: string, gifUrl: string) => void
+  onVideoLoaded?: (exerciseId: string, videoId: string, thumbnailUrl: string, videoGender: 'male' | 'female') => void
   onRemove?: () => void
 }
 
-export function ExerciseItem({ exercise, index, gender, onGifLoaded, onRemove }: ExerciseItemProps) {
-  const [gifUrl, setGifUrl] = useState<string | null>(null)
-  const [gifUrl2, setGifUrl2] = useState<string | null>(null)
-  const [isAnimated, setIsAnimated] = useState(false)
-  const [gifError, setGifError] = useState(false)
-  const [gifLoading, setGifLoading] = useState(false)
-  const [modalOpen, setModalOpen] = useState(false)
+export function ExerciseItem({ exercise, index, gender, onVideoLoaded, onRemove }: ExerciseItemProps) {
+  const [videoId, setVideoId] = useState<string | null>(null)
+  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null)
+  const [videoTitle, setVideoTitle] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [playing, setPlaying] = useState(false)
   const [expanded, setExpanded] = useState(false)
   const [checked, setChecked] = useState(false)
-  // For two-frame flip animation (free DB fallback)
-  const [frameIndex, setFrameIndex] = useState(0)
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  // Always re-fetch when name or gender changes — never short-circuit on cached values
   useEffect(() => {
-    setGifUrl(null)
-    setGifUrl2(null)
-    setGifError(false)
-    setIsAnimated(false)
-    setFrameIndex(0)
-    setGifLoading(true)
+    setPlaying(false)
 
-    fetch(`/api/exercises/gif?name=${encodeURIComponent(exercise.name)}&gender=${gender}`)
+    // Use Supabase-cached values if they match the current gender
+    if (exercise.video_id && exercise.thumbnail_url && exercise.video_gender === gender) {
+      setVideoId(exercise.video_id)
+      setThumbnailUrl(exercise.thumbnail_url)
+      setVideoTitle(null)
+      return
+    }
+
+    setVideoId(null)
+    setThumbnailUrl(null)
+    setLoading(true)
+
+    fetch(`/api/exercises/video?exercise=${encodeURIComponent(exercise.name)}&gender=${gender}`)
       .then((r) => r.json())
       .then((d) => {
-        if (d.gif_url) {
-          setGifUrl(d.gif_url)
-          setGifUrl2(d.gif_url2 ?? null)
-          setIsAnimated(d.is_animated ?? false)
-          onGifLoaded?.(exercise.id, d.gif_url)
-        } else {
-          setGifError(true)
+        if (d.videoId) {
+          setVideoId(d.videoId)
+          setThumbnailUrl(d.thumbnailUrl ?? null)
+          setVideoTitle(d.title ?? null)
+          onVideoLoaded?.(exercise.id, d.videoId, d.thumbnailUrl ?? '', gender)
         }
       })
-      .catch(() => setGifError(true))
-      .finally(() => setGifLoading(false))
+      .catch(() => {/* silent — fallback placeholder shown */})
+      .finally(() => setLoading(false))
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [exercise.name, gender])
-
-  // Flip between two frames when we have static images (free DB)
-  useEffect(() => {
-    if (intervalRef.current) clearInterval(intervalRef.current)
-    if (gifUrl && gifUrl2 && !isAnimated) {
-      intervalRef.current = setInterval(() => {
-        setFrameIndex((i) => (i === 0 ? 1 : 0))
-      }, 700)
-    }
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current) }
-  }, [gifUrl, gifUrl2, isAnimated])
-
-  const frames = [gifUrl, gifUrl2].filter(Boolean) as string[]
-  const displayUrl = frames.length > 1 ? frames[frameIndex] : (gifUrl ?? null)
-  const hasMedia = !!displayUrl && !gifError
-  const isPlaying = hasMedia && (isAnimated || frames.length > 1)
+  }, [exercise.name, gender, exercise.video_id, exercise.video_gender])
 
   const restLabel = exercise.rest_seconds
     ? exercise.rest_seconds >= 60
@@ -74,164 +58,185 @@ export function ExerciseItem({ exercise, index, gender, onGifLoaded, onRemove }:
     : null
 
   return (
-    <>
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow">
-
-        {/* Video player area */}
-        <div
-          onClick={() => hasMedia && setModalOpen(true)}
-          className={`relative w-full h-56 bg-slate-900 ${hasMedia ? 'cursor-pointer group' : ''}`}
-        >
-          {gifLoading ? (
-            <div className="w-full h-full flex items-center justify-center">
-              <div className="w-8 h-8 border-2 border-slate-600 border-t-slate-300 rounded-full animate-spin" />
-            </div>
-          ) : hasMedia ? (
-            <>
-              <img
-                src={displayUrl}
-                alt={exercise.name}
-                className="w-full h-full object-cover"
-                onError={() => setGifError(true)}
-              />
-              {/* Hover overlay */}
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
-                <div className="w-14 h-14 rounded-full bg-white/90 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg">
-                  <Play size={22} className="text-slate-800 fill-slate-800 ml-1" />
-                </div>
-              </div>
-              {/* Playing badge — only shown when content is actually animated/flipping */}
-              {isPlaying && (
-                <span className="absolute bottom-3 left-3 bg-black/60 text-white text-xs px-2.5 py-1 rounded-full backdrop-blur-sm font-medium flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-                  {isAnimated ? 'Playing' : 'Demo'}
-                </span>
-              )}
-            </>
-          ) : (
-            <div className="flex flex-col items-center justify-center h-full gap-3">
-              <div className="w-14 h-14 rounded-full bg-slate-700 flex items-center justify-center">
-                <Play size={24} className="text-slate-400 ml-1" />
-              </div>
-              <span className="text-sm font-medium text-slate-400 text-center px-4">{exercise.name}</span>
-              <span className="text-xs text-slate-600">Demo unavailable</span>
-            </div>
-          )}
-
-          {/* Exercise number + gender badge row */}
-          <div className="absolute top-3 left-3 flex items-center gap-2">
-            <div className="bg-black/50 text-white text-xs font-semibold px-2.5 py-1 rounded-full backdrop-blur-sm">
-              #{index + 1}
-            </div>
-            <div className={`text-white text-xs font-semibold px-2.5 py-1 rounded-full backdrop-blur-sm ${gender === 'female' ? 'bg-pink-500/70' : 'bg-blue-500/70'}`}>
-              {gender === 'female' ? '♀ Female' : '♂ Male'}
-            </div>
+    <div
+      className="bg-white rounded-2xl overflow-hidden hover:shadow-md transition-shadow"
+      style={{ border: '1px solid #EBEBF0' }}
+    >
+      {/* ── Video / thumbnail area ── */}
+      <div className="relative overflow-hidden" style={{ height: 200, borderRadius: '16px 16px 0 0' }}>
+        {loading ? (
+          /* Loading skeleton */
+          <div className="w-full h-full bg-slate-100 flex items-center justify-center animate-pulse">
+            <Dumbbell size={28} className="text-slate-300" />
           </div>
-        </div>
-
-        {/* Details */}
-        <div className="p-5">
-          <h3 className="text-lg font-bold text-text-primary mb-3">{exercise.name}</h3>
-
-          <div className="flex flex-wrap gap-2 mb-4">
-            {exercise.sets && (
-              <div className="px-3 py-1.5 bg-blue-50 rounded-lg border border-blue-200">
-                <span className="font-bold text-blue-900 text-sm">{exercise.sets}</span>
-                <span className="text-blue-600 text-xs ml-1">sets</span>
-              </div>
-            )}
-            {exercise.reps && (
-              <div className="px-3 py-1.5 bg-orange-50 rounded-lg border border-orange-200">
-                <span className="font-bold text-orange-900 text-sm">×{exercise.reps}</span>
-                <span className="text-orange-600 text-xs ml-1">reps</span>
-              </div>
-            )}
-            {exercise.duration_seconds && (
-              <div className="px-3 py-1.5 bg-orange-50 rounded-lg border border-orange-200">
-                <span className="font-bold text-orange-900 text-sm">
-                  {Math.floor(exercise.duration_seconds / 60)}:{String(exercise.duration_seconds % 60).padStart(2, '0')}
-                </span>
-                <span className="text-orange-600 text-xs ml-1">min</span>
-              </div>
-            )}
-            {restLabel && (
-              <div className="px-3 py-1.5 bg-purple-50 rounded-lg border border-purple-200">
-                <span className="text-purple-600 text-xs">Rest:</span>
-                <span className="font-bold text-purple-900 text-sm ml-1">{restLabel}</span>
-              </div>
-            )}
-          </div>
-
+        ) : playing && videoId ? (
+          /* YouTube embed */
+          <iframe
+            src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=0&modestbranding=1&rel=0`}
+            width="100%"
+            height="200"
+            style={{ border: 'none', display: 'block' }}
+            allow="autoplay; encrypted-media"
+            allowFullScreen
+            title={exercise.name}
+          />
+        ) : videoId && thumbnailUrl ? (
+          /* Thumbnail with play button overlay */
           <button
-            onClick={() => setExpanded(!expanded)}
-            className="text-teal hover:text-accent-sage font-medium text-sm flex items-center gap-1 mb-3 transition-colors"
+            className="w-full h-full relative block focus:outline-none group"
+            onClick={() => setPlaying(true)}
+            aria-label={`Play ${exercise.name} tutorial`}
           >
-            {expanded ? '▾ Hide explanation' : '▸ Why this exercise?'}
-          </button>
-          {expanded && (
-            <p className="text-xs text-text-secondary leading-relaxed mb-4 bg-slate-50 rounded-xl p-3 border border-slate-200">
-              {exercise.reasoning}
-            </p>
-          )}
-
-          <div className="flex items-center gap-2 pt-1 border-t border-slate-100">
-            <button
-              onClick={() => setChecked(!checked)}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                checked
-                  ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
-                  : 'bg-slate-100 text-slate-500 hover:bg-slate-200 border border-transparent'
-              }`}
+            <img
+              src={thumbnailUrl}
+              alt={exercise.name}
+              className="w-full h-full object-cover"
+            />
+            {/* Dark overlay */}
+            <div className="absolute inset-0 bg-black/15 group-hover:bg-black/30 transition-colors" />
+            {/* Play button */}
+            <div
+              className="absolute inset-0 flex items-center justify-center"
+              aria-hidden
             >
-              <Check size={14} />
-              {checked ? 'Completed' : 'Complete'}
-            </button>
-            {onRemove && (
-              <button
-                onClick={onRemove}
-                className="ml-auto flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-slate-400 hover:bg-red-50 hover:text-red-500 border border-transparent hover:border-red-200 transition-all"
+              <div
+                className="flex items-center justify-center rounded-full bg-white shadow-lg group-hover:scale-105 transition-transform"
+                style={{ width: 48, height: 48 }}
               >
-                <X size={14} />
-                Remove
-              </button>
+                <Play size={20} className="text-slate-800 fill-slate-800 ml-1" />
+              </div>
+            </div>
+          </button>
+        ) : (
+          /* Fallback — no video found */
+          <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-white">
+            <div className="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center">
+              <Dumbbell size={24} className="text-slate-400" />
+            </div>
+            <span className="text-base font-semibold text-center px-6 text-slate-700" style={{ fontFamily: 'DM Sans, sans-serif' }}>
+              {exercise.name}
+            </span>
+            {exercise.sets && exercise.reps && (
+              <span className="text-sm text-slate-400" style={{ fontFamily: 'DM Sans, sans-serif' }}>
+                {exercise.sets} sets × {exercise.reps} reps
+              </span>
             )}
           </div>
-        </div>
+        )}
+
+        {/* Exercise number badge */}
+        {!playing && (
+          <div className="absolute top-3 left-3 bg-black/50 text-white text-xs font-semibold px-2.5 py-1 rounded-full backdrop-blur-sm z-10">
+            #{index + 1}
+          </div>
+        )}
+
+        {/* Gender badge */}
+        {!playing && videoId && (
+          <div
+            className={`absolute top-3 right-3 text-white text-xs font-semibold px-2.5 py-1 rounded-full backdrop-blur-sm z-10 ${
+              gender === 'female' ? 'bg-pink-500/70' : 'bg-blue-500/70'
+            }`}
+          >
+            {gender === 'female' ? '♀ Female' : '♂ Male'}
+          </div>
+        )}
+
+        {/* Collapse button when playing */}
+        {playing && (
+          <button
+            onClick={() => setPlaying(false)}
+            className="absolute top-2 right-2 z-20 w-8 h-8 rounded-full bg-black/50 hover:bg-black/70 flex items-center justify-center backdrop-blur-sm transition-colors"
+            aria-label="Close video"
+          >
+            <X size={14} className="text-white" />
+          </button>
+        )}
       </div>
 
-      {/* Modal */}
-      {modalOpen && hasMedia && (
-        <div
-          className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50"
-          onClick={() => setModalOpen(false)}
-        >
-          <div
-            className="bg-slate-900 rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="relative">
-              <img
-                src={displayUrl}
-                alt={exercise.name}
-                className="w-full object-cover max-h-96"
-              />
-              <button
-                onClick={() => setModalOpen(false)}
-                className="absolute top-3 right-3 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center backdrop-blur-sm transition-colors"
-              >
-                <X size={16} className="text-white" />
-              </button>
-              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
-                <h3 className="text-white font-bold text-lg">{exercise.name}</h3>
-                <p className="text-slate-300 text-sm">
-                  {exercise.sets && exercise.reps && `${exercise.sets} sets × ${exercise.reps} reps`}
-                  {restLabel && ` · Rest: ${restLabel}`}
-                </p>
-              </div>
-            </div>
-          </div>
+      {/* YouTube attribution — required by ToS */}
+      {(playing || videoId) && (
+        <div className="px-5 pt-1.5 pb-0 flex items-center gap-1">
+          <span style={{ fontSize: 10, color: '#9B9BAA' }}>via YouTube</span>
+          {videoTitle && !playing && (
+            <span className="truncate" style={{ fontSize: 10, color: '#9B9BAA' }}>
+              · {videoTitle}
+            </span>
+          )}
         </div>
       )}
-    </>
+
+      {/* ── Details ── */}
+      <div className="p-5">
+        <h3 className="text-lg font-bold text-text-primary mb-3">{exercise.name}</h3>
+
+        {/* Specs chips */}
+        <div className="flex flex-wrap gap-2 mb-4">
+          {exercise.sets && (
+            <div className="px-3 py-1.5 bg-blue-50 rounded-lg border border-blue-200">
+              <span className="font-bold text-blue-900 text-sm">{exercise.sets}</span>
+              <span className="text-blue-600 text-xs ml-1">sets</span>
+            </div>
+          )}
+          {exercise.reps && (
+            <div className="px-3 py-1.5 bg-orange-50 rounded-lg border border-orange-200">
+              <span className="font-bold text-orange-900 text-sm">×{exercise.reps}</span>
+              <span className="text-orange-600 text-xs ml-1">reps</span>
+            </div>
+          )}
+          {exercise.duration_seconds && (
+            <div className="px-3 py-1.5 bg-orange-50 rounded-lg border border-orange-200">
+              <span className="font-bold text-orange-900 text-sm">
+                {Math.floor(exercise.duration_seconds / 60)}:{String(exercise.duration_seconds % 60).padStart(2, '0')}
+              </span>
+              <span className="text-orange-600 text-xs ml-1">min</span>
+            </div>
+          )}
+          {restLabel && (
+            <div className="px-3 py-1.5 bg-purple-50 rounded-lg border border-purple-200">
+              <span className="text-purple-600 text-xs">Rest:</span>
+              <span className="font-bold text-purple-900 text-sm ml-1">{restLabel}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Why this exercise */}
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="text-teal hover:text-accent-sage font-medium text-sm flex items-center gap-1 mb-3 transition-colors"
+        >
+          {expanded ? '▾ Hide explanation' : '▸ Why this exercise?'}
+        </button>
+        {expanded && (
+          <p className="text-xs text-text-secondary leading-relaxed mb-4 bg-slate-50 rounded-xl p-3 border border-slate-200">
+            {exercise.reasoning}
+          </p>
+        )}
+
+        {/* Actions */}
+        <div className="flex items-center gap-2 pt-1 border-t border-slate-100">
+          <button
+            onClick={() => setChecked(!checked)}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+              checked
+                ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                : 'bg-slate-100 text-slate-500 hover:bg-slate-200 border border-transparent'
+            }`}
+          >
+            <Check size={14} />
+            {checked ? 'Completed' : 'Complete'}
+          </button>
+          {onRemove && (
+            <button
+              onClick={onRemove}
+              className="ml-auto flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-slate-400 hover:bg-red-50 hover:text-red-500 border border-transparent hover:border-red-200 transition-all"
+            >
+              <X size={14} />
+              Remove
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
   )
 }
