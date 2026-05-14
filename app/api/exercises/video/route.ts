@@ -22,25 +22,34 @@ function buildQuery(exercise: string, gender: string, type: string): string {
 }
 
 export async function GET(req: NextRequest) {
-  const exercise = req.nextUrl.searchParams.get('exercise')
-  if (!exercise) return Response.json({ error: 'Missing exercise param' }, { status: 400 })
+  console.log('[youtube] === START ===')
 
+  const exercise = req.nextUrl.searchParams.get('exercise')
   const gender = req.nextUrl.searchParams.get('gender') === 'female' ? 'female' : 'male'
   const typeParam = req.nextUrl.searchParams.get('type')
-  const type = typeParam ?? detectType(exercise)
-  const q = buildQuery(exercise, gender, type)
 
-  console.log('[exercises/video] search:', JSON.stringify(q))
+  console.log('[youtube] exercise name:', exercise)
+  console.log('[youtube] gender:', gender)
+  console.log('[youtube] YOUTUBE_API_KEY exists:', !!YOUTUBE_API_KEY)
+  console.log('[youtube] key prefix:', YOUTUBE_API_KEY?.substring(0, 8))
+
+  if (!exercise) return Response.json({ error: 'Missing exercise param' }, { status: 400 })
 
   if (!YOUTUBE_API_KEY) {
-    console.warn('[exercises/video] YOUTUBE_API_KEY not set')
-    return Response.json({ videoId: null, thumbnailUrl: null, title: null })
+    console.error('[youtube] YOUTUBE_API_KEY is not set — check environment variables')
+    return Response.json({ error: 'Missing API key', videoId: null, thumbnailUrl: null, title: null })
   }
+
+  const type = typeParam ?? detectType(exercise)
+  const query = buildQuery(exercise, gender, type)
+
+  console.log('[youtube] search query:', query)
+  console.log('[youtube] calling YouTube API...')
 
   try {
     const url = new URL('https://www.googleapis.com/youtube/v3/search')
     url.searchParams.set('part', 'snippet')
-    url.searchParams.set('q', q)
+    url.searchParams.set('q', query)
     url.searchParams.set('type', 'video')
     url.searchParams.set('videoDuration', 'short')
     url.searchParams.set('videoEmbeddable', 'true')
@@ -48,17 +57,20 @@ export async function GET(req: NextRequest) {
     url.searchParams.set('maxResults', '1')
     url.searchParams.set('key', YOUTUBE_API_KEY)
 
-    const res = await fetch(url.toString())
-    if (!res.ok) {
-      const err = await res.text()
-      console.error('[exercises/video] YouTube API error', res.status, err.slice(0, 300))
-      return Response.json({ videoId: null, thumbnailUrl: null, title: null })
+    const response = await fetch(url.toString())
+    console.log('[youtube] API response status:', response.status)
+
+    const data = await response.json()
+    console.log('[youtube] API response body:', JSON.stringify(data, null, 2))
+
+    if (!response.ok) {
+      console.error('[youtube] YouTube API error:', response.status, data?.error?.message)
+      return Response.json({ error: data?.error?.message ?? 'YouTube API error', videoId: null, thumbnailUrl: null, title: null })
     }
 
-    const data = await res.json()
     const item = data.items?.[0]
     if (!item) {
-      console.log('[exercises/video] no results for:', q)
+      console.log('[youtube] no results returned for query:', query)
       return Response.json({ videoId: null, thumbnailUrl: null, title: null })
     }
 
@@ -69,10 +81,14 @@ export async function GET(req: NextRequest) {
       item.snippet.thumbnails.default?.url
     const title: string = item.snippet.title
 
-    console.log('[exercises/video] found:', videoId, '|', title.slice(0, 60))
+    console.log('[youtube] videoId found:', videoId)
+    console.log('[youtube] thumbnailUrl:', thumbnailUrl)
+    console.log('[youtube] title:', title)
+    console.log('[youtube] === DONE ===')
+
     return Response.json({ videoId, thumbnailUrl, title })
   } catch (err) {
-    console.error('[exercises/video] fetch error:', err)
-    return Response.json({ videoId: null, thumbnailUrl: null, title: null })
+    console.error('[youtube] fetch exception:', err)
+    return Response.json({ error: String(err), videoId: null, thumbnailUrl: null, title: null })
   }
 }
