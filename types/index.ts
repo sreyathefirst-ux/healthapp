@@ -157,7 +157,6 @@ export interface WeeklyPlan {
   meal_plan: MealPlan | null
   workout_plan: WorkoutPlan | null
   health_report: string | null
-  weekly_progress_report: string | null
   grocery_checklist: Record<string, boolean>
   generated_at: string
 }

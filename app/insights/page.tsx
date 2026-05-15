@@ -238,8 +238,6 @@ function WaterCard({ data }: { data: DayData[] }) {
 
 // ── Health Report tab ──────────────────────────────────────────────────────────
 
-type ReportSubTab = 'weekly' | 'overview'
-
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const reportMarkdownComponents: any = {
   h1: ({ children }: { children: React.ReactNode }) => <h1 style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 700, fontSize: 22, color: '#1A1A2E', margin: '24px 0 12px' }}>{children}</h1>,
@@ -254,10 +252,8 @@ const reportMarkdownComponents: any = {
 }
 
 function HealthReportTab({ userId }: { userId: string }) {
-  const [subTab, setSubTab] = useState<ReportSubTab>('weekly')
   const [reportLoading, setReportLoading] = useState(true)
   const [healthReport, setHealthReport] = useState<string | null>(null)
-  const [weeklyReport, setWeeklyReport] = useState<string | null>(null)
   const [currentWeek, setCurrentWeek] = useState<Date>(() => getMonday(new Date()))
   const [availableWeeks, setAvailableWeeks] = useState<string[]>([])
   const [regenerating, setRegenerating] = useState(false)
@@ -270,17 +266,16 @@ function HealthReportTab({ userId }: { userId: string }) {
     setTimeout(() => setToast(null), 4000)
   }
 
-  const fetchReports = useCallback(async (monday: Date) => {
+  const fetchReport = useCallback(async (monday: Date) => {
     setReportLoading(true)
     const supabase = createClient()
     const { data } = await supabase
       .from('weekly_plans')
-      .select('health_report, weekly_progress_report')
+      .select('health_report')
       .eq('user_id', userId)
       .eq('week_start_date', toISO(monday))
       .maybeSingle()
     setHealthReport(data?.health_report ?? null)
-    setWeeklyReport(data?.weekly_progress_report ?? null)
     setReportLoading(false)
   }, [userId])
 
@@ -291,46 +286,45 @@ function HealthReportTab({ userId }: { userId: string }) {
         .from('weekly_plans')
         .select('week_start_date')
         .eq('user_id', userId)
+        .not('health_report', 'is', null)
         .order('week_start_date', { ascending: false })
       setAvailableWeeks((plans ?? []).map((p: { week_start_date: string }) => p.week_start_date))
       const mostRecent = plans?.[0]?.week_start_date
       if (mostRecent) {
         const d = new Date(mostRecent + 'T00:00:00Z')
         setCurrentWeek(d)
-        fetchReports(d)
+        fetchReport(d)
       } else {
-        fetchReports(getMonday(new Date()))
+        fetchReport(getMonday(new Date()))
       }
     }
     init()
-  }, [userId, fetchReports])
+  }, [userId, fetchReport])
 
   function prevWeek() {
     const prev = new Date(currentWeek)
-    prev.setDate(prev.getDate() - 7)
+    prev.setUTCDate(prev.getUTCDate() - 7)
     setCurrentWeek(prev)
-    fetchReports(prev)
+    fetchReport(prev)
   }
 
   function nextWeek() {
     if (isCurrentWeek) return
     const next = new Date(currentWeek)
-    next.setDate(next.getDate() + 7)
+    next.setUTCDate(next.getUTCDate() + 7)
     setCurrentWeek(next)
-    fetchReports(next)
+    fetchReport(next)
   }
 
   async function handleRegenerate() {
     if (!isCurrentWeek) return
     setRegenerating(true)
-    const endpoint = subTab === 'weekly' ? '/api/plans/weekly-progress' : '/api/plans/report'
-    showToast(subTab === 'weekly' ? 'Generating weekly check-in…' : 'Generating health overview… up to 60s')
+    showToast('Generating your health report… up to 60s')
     try {
-      const res = await fetch(endpoint, { method: 'POST' })
+      const res = await fetch('/api/plans/report', { method: 'POST' })
       const data = await res.json()
       if (data.success) {
-        if (subTab === 'weekly') setWeeklyReport(data.report)
-        else setHealthReport(data.report)
+        setHealthReport(data.report)
         showToast('Done!')
       } else {
         showToast('Generation failed — try again')
@@ -343,7 +337,6 @@ function HealthReportTab({ userId }: { userId: string }) {
   }
 
   const hasPrev = availableWeeks.some(w => w < toISO(currentWeek))
-  const activeReport = subTab === 'weekly' ? weeklyReport : healthReport
 
   return (
     <div>
@@ -354,25 +347,20 @@ function HealthReportTab({ userId }: { userId: string }) {
         </div>
       )}
 
-      {/* Sub-tab row + Regenerate */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, gap: 12 }}>
-        <div style={{ display: 'flex', background: '#F5F5F8', borderRadius: 12, padding: 3, gap: 2, flex: 1 }}>
-          {(['weekly', 'overview'] as ReportSubTab[]).map((t) => (
-            <button
-              key={t}
-              onClick={() => setSubTab(t)}
-              style={{
-                flex: 1, padding: '7px 8px', borderRadius: 9, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600,
-                fontFamily: "'DM Sans', sans-serif",
-                background: subTab === t ? 'white' : 'transparent',
-                color: subTab === t ? '#1A1A2E' : '#9B9BAA',
-                boxShadow: subTab === t ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
-                transition: 'all 0.15s',
-              }}
-            >
-              {t === 'weekly' ? 'Weekly Check-in' : 'Health Overview'}
-            </button>
-          ))}
+      {/* Week selector + Regenerate */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button onClick={prevWeek} disabled={!hasPrev} aria-label="Previous week"
+            style={{ background: 'none', border: 'none', padding: 6, display: 'flex', borderRadius: 8, cursor: hasPrev ? 'pointer' : 'not-allowed', opacity: hasPrev ? 1 : 0.3 }}>
+            <ChevronLeft size={20} color="#1A1A2E" />
+          </button>
+          <span style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: 14, color: '#1A1A2E', minWidth: 140, textAlign: 'center' }}>
+            Week of {formatWeekLabel(currentWeek)}
+          </span>
+          <button onClick={nextWeek} disabled={isCurrentWeek} aria-label="Next week"
+            style={{ background: 'none', border: 'none', padding: 6, display: 'flex', borderRadius: 8, cursor: isCurrentWeek ? 'not-allowed' : 'pointer', opacity: isCurrentWeek ? 0.3 : 1 }}>
+            <ChevronRight size={20} color="#1A1A2E" />
+          </button>
         </div>
         {isCurrentWeek && (
           <button
@@ -392,21 +380,6 @@ function HealthReportTab({ userId }: { userId: string }) {
         )}
       </div>
 
-      {/* Week selector */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 24 }}>
-        <button onClick={prevWeek} disabled={!hasPrev} aria-label="Previous week"
-          style={{ background: 'none', border: 'none', padding: 6, display: 'flex', borderRadius: 8, cursor: hasPrev ? 'pointer' : 'not-allowed', opacity: hasPrev ? 1 : 0.3 }}>
-          <ChevronLeft size={20} color="#1A1A2E" />
-        </button>
-        <span style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: 14, color: '#1A1A2E', minWidth: 160, textAlign: 'center' }}>
-          Week of {formatWeekLabel(currentWeek)}
-        </span>
-        <button onClick={nextWeek} disabled={isCurrentWeek} aria-label="Next week"
-          style={{ background: 'none', border: 'none', padding: 6, display: 'flex', borderRadius: 8, cursor: isCurrentWeek ? 'not-allowed' : 'pointer', opacity: isCurrentWeek ? 0.3 : 1 }}>
-          <ChevronRight size={20} color="#1A1A2E" />
-        </button>
-      </div>
-
       {/* Report content */}
       {reportLoading ? (
         <div className="space-y-3">
@@ -416,23 +389,19 @@ function HealthReportTab({ userId }: { userId: string }) {
           <Skeleton className="h-4 w-full" />
           <Skeleton className="h-4 w-2/3" />
         </div>
-      ) : activeReport ? (
+      ) : healthReport ? (
         <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, lineHeight: 1.7, color: '#3A3A4A' }}>
           <ReactMarkdown components={reportMarkdownComponents}>
-            {activeReport}
+            {healthReport}
           </ReactMarkdown>
-          {subTab === 'overview' && (
-            <p style={{ fontSize: 11, color: '#9B9BAA', marginTop: 24, lineHeight: 1.5 }}>
-              <strong>Medical Disclaimer:</strong> This report is AI-generated for informational purposes only. Always consult a qualified healthcare provider before making changes to your health regimen.
-            </p>
-          )}
+          <p style={{ fontSize: 11, color: '#9B9BAA', marginTop: 24, lineHeight: 1.5 }}>
+            <strong>Medical Disclaimer:</strong> This report is AI-generated for informational purposes only. Always consult a qualified healthcare provider before making changes to your health regimen.
+          </p>
         </div>
       ) : (
         <div style={{ textAlign: 'center', marginTop: 48 }}>
           <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: '#9B9BAA', marginBottom: 16 }}>
-            {subTab === 'weekly'
-              ? 'No weekly check-in yet for this week.'
-              : 'No health overview yet.'}
+            No health report yet.
           </p>
           {isCurrentWeek && (
             <button
