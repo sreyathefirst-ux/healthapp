@@ -303,7 +303,7 @@ export function VitaChat() {
       {/* ── Chat Panel ─────────────────────────────────────────────────────────── */}
       {isOpen && (
         <div
-          className="fixed right-6 bottom-24 md:bottom-6"
+          className="fixed right-5 bottom-[154px] md:bottom-[88px]"
           style={{
             width: 'min(375px, calc(100vw - 48px))',
             height: 'min(560px, calc(100vh - 120px))',
@@ -586,47 +586,66 @@ export function VitaChat() {
         style={{
           position: 'fixed',
           bottom: 90,
-          right: 24,
-          width: 56,
-          height: 56,
-          borderRadius: '50%',
+          right: 20,
+          height: 52,
+          paddingLeft: 12,
+          paddingRight: 20,
+          borderRadius: 999,
           background: 'linear-gradient(135deg, #6FD8A0 0%, #5DDAB8 50%, #B48FE8 100%)',
-          boxShadow: '0 4px 20px rgba(93,218,184,0.4)',
+          boxShadow: '0 4px 24px rgba(93,218,184,0.5)',
           border: 'none',
           cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center',
+          gap: 8,
           zIndex: 1000,
-          transition: 'transform 0.2s ease',
+          transition: 'transform 0.2s ease, box-shadow 0.2s ease',
         }}
-        onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.05)')}
-        onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
-        onMouseDown={e => (e.currentTarget.style.transform = 'scale(0.95)')}
-        onMouseUp={e => (e.currentTarget.style.transform = 'scale(1.05)')}
+        onMouseEnter={e => {
+          e.currentTarget.style.transform = 'scale(1.04)'
+          e.currentTarget.style.boxShadow = '0 6px 28px rgba(93,218,184,0.65)'
+        }}
+        onMouseLeave={e => {
+          e.currentTarget.style.transform = 'scale(1)'
+          e.currentTarget.style.boxShadow = '0 4px 24px rgba(93,218,184,0.5)'
+        }}
+        onMouseDown={e => (e.currentTarget.style.transform = 'scale(0.97)')}
+        onMouseUp={e => (e.currentTarget.style.transform = 'scale(1.04)')}
       >
-        <Image
-          src="/leaf-logo.png"
-          alt="Vita"
-          width={32}
-          height={32}
-          style={{ objectFit: 'contain', filter: 'brightness(0) invert(1)' }}
-        />
-        {badge && (
-          <span
-            className="animate-pulse"
-            style={{
-              position: 'absolute',
-              top: 2,
-              right: 2,
-              width: 10,
-              height: 10,
-              borderRadius: '50%',
-              background: '#E85D75',
-              border: '2px solid white',
-            }}
+        <div style={{ position: 'relative', flexShrink: 0 }}>
+          <Image
+            src="/leaf-logo.png"
+            alt="Vita"
+            width={26}
+            height={26}
+            style={{ objectFit: 'contain', filter: 'brightness(0) invert(1)', display: 'block' }}
           />
-        )}
+          {badge && (
+            <span
+              className="animate-pulse"
+              style={{
+                position: 'absolute',
+                top: -2,
+                right: -2,
+                width: 9,
+                height: 9,
+                borderRadius: '50%',
+                background: '#E85D75',
+                border: '2px solid white',
+              }}
+            />
+          )}
+        </div>
+        <span style={{
+          fontFamily: "'DM Sans', sans-serif",
+          fontWeight: 600,
+          fontSize: 15,
+          color: 'white',
+          letterSpacing: '0.01em',
+          whiteSpace: 'nowrap',
+        }}>
+          Ask Vita
+        </span>
       </button>
     </>
   )
