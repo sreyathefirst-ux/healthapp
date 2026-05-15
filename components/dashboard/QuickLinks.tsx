@@ -28,7 +28,7 @@ const STATIC_LINKS = [
   },
   {
     href: '/insights',
-    label: 'Health Report',
+    label: 'Insights',
     subtitle: 'View insights',
     icon: CheckCircle2,
     accent: 'from-blue-100 to-blue-50',
