@@ -27,7 +27,7 @@ const STATIC_LINKS = [
     iconColor: 'text-purple-600',
   },
   {
-    href: '/health-report',
+    href: '/insights',
     label: 'Health Report',
     subtitle: 'View insights',
     icon: CheckCircle2,
