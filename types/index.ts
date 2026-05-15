@@ -145,6 +145,8 @@ export interface DailyLog {
   night_routine_completion: number
   morning_items_checked: string[]
   night_items_checked: string[]
+  morning_checkin: { energy?: number; sleep_hours?: number } | null
+  night_checkin: { weight?: number; water_cups?: number } | null
   last_seen_at: string
 }
 
@@ -155,6 +157,7 @@ export interface WeeklyPlan {
   meal_plan: MealPlan | null
   workout_plan: WorkoutPlan | null
   health_report: string | null
+  weekly_progress_report: string | null
   grocery_checklist: Record<string, boolean>
   generated_at: string
 }
