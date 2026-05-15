@@ -99,7 +99,7 @@ export function PetSelector() {
     setTasks((prev) => prev.map((t) => (t.key === key ? { ...t, status } : t)))
   }
 
-  async function runGeneration(tasksToRun: Task[]) {
+  async function runGeneration(tasksToRun: Task[]): Promise<boolean> {
     const activeKeys = new Set(tasksToRun.map((t) => t.key))
     const apiCalls: { keys: string[]; endpoint: string }[] = []
 
@@ -119,19 +119,23 @@ export function PetSelector() {
       activeKeys.has(t.key) ? { ...t, status: 'running' } : t
     ))
 
-    await Promise.all(
+    const results = await Promise.all(
       apiCalls.map(async ({ keys, endpoint }) => {
         const success = await callWithRetry(endpoint)
         const status: TaskStatus = success ? 'done' : 'error'
         setTasks((prev) => prev.map((t) => keys.includes(t.key) ? { ...t, status } : t))
+        return success
       })
     )
+
+    return results.every(Boolean)
   }
 
   async function handleMeetPet() {
     if (!selectedPet || !petName.trim()) return
     setLoading(true)
 
+    try {
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setLoading(false); return }
@@ -167,17 +171,17 @@ export function PetSelector() {
     const initialTasks = makeTasks()
     setTasks(initialTasks)
 
-    await runGeneration(initialTasks)
-
-    setTasks((prev) => {
-      const errors = prev.filter((t) => t.status === 'error')
-      if (errors.length === 0) {
+      const allSucceeded = await runGeneration(initialTasks)
+      if (allSucceeded) {
         setAllDone(true)
       } else {
         setHasErrors(true)
       }
-      return prev
-    })
+    } catch {
+      setLoading(false)
+      setGenerating(false)
+      setHasErrors(true)
+    }
   }
 
   useEffect(() => {
@@ -192,17 +196,16 @@ export function PetSelector() {
     if (failedTasks.length === 0) return
     setHasErrors(false)
 
-    await runGeneration(failedTasks)
-
-    setTasks((prev) => {
-      const errors = prev.filter((t) => t.status === 'error')
-      if (errors.length === 0) {
+    try {
+      const allSucceeded = await runGeneration(failedTasks)
+      if (allSucceeded) {
         setAllDone(true)
       } else {
         setHasErrors(true)
       }
-      return prev
-    })
+    } catch {
+      setHasErrors(true)
+    }
   }
 
   const petEmoji = pets.find((p) => p.type === selectedPet)?.emoji ?? '🌿'
