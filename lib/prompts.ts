@@ -341,60 +341,72 @@ export function buildOnboardingSystemPrompt(step: number, stepGoal: string): str
   "conditions": ["string array of medical conditions, or []"],
   "medications": ["string array of current medications, or []"],
   "supplements": ["string array of supplements taken, or []"],
-  "exercise_history": "string — brief description of past exercise habits"
+  "exercise_history": "string — brief description of past exercise habits, or 'not specified'"
 }`,
     2: `{
   "has_bloodwork": boolean
 }`,
     3: `{
-  "concerns": ["string array of health concerns"],
-  "goals": ["string array of at least 3 specific health goals"],
-  "success_definition": "string — what success looks like to them in 6 months"
+  "concerns": ["string array of health concerns, or []"],
+  "goals": ["string array of health goals"],
+  "success_definition": "string — what success looks like to them, or 'not specified'"
 }`,
     4: `{
   "restrictions": ["string array — e.g. vegetarian, vegan, halal, kosher, or []"],
   "allergies": ["string array — e.g. nuts, dairy, gluten, or []"],
-  "loved_cuisines": ["string array — favorite cuisines"],
-  "disliked_foods": ["string array — foods they dislike or avoid"],
-  "meal_prep_days": number — how many days per week they can meal prep,
+  "loved_cuisines": ["string array — favorite cuisines, or []"],
+  "disliked_foods": ["string array — foods they dislike or avoid, or []"],
+  "meal_prep_days": number — how many days per week they can meal prep (default 2 if not specified),
   "typical_meals": {}
 }`,
     5: `{
   "goals": ["string array — fitness goals"],
-  "activity_types": ["string array — e.g. weightlifting, running, yoga, cycling"],
+  "activity_types": ["string array — e.g. weightlifting, running, yoga, cycling, or []"],
   "days_per_week": number — workout days per week,
   "gym_access": boolean,
   "home_equipment": ["string array — equipment at home, or []"],
-  "preferred_duration_mins": number — preferred workout duration in minutes
+  "preferred_duration_mins": number — preferred workout duration in minutes (default 45 if not specified)
 }`,
     6: `{
   "wake_time": "HH:MM — 24-hour format e.g. 07:00",
   "sleep_time": "HH:MM — 24-hour format e.g. 23:00",
-  "morning_items": ["string array — existing morning habits they mentioned"],
-  "night_items": ["string array — existing night habits they mentioned"]
+  "morning_items": ["string array — existing morning habits they mentioned, or []"],
+  "night_items": ["string array — existing night habits they mentioned, or []"]
 }`,
+  }
+
+  const minimumRequired: Record<number, string> = {
+    1: 'name, age, height, weight — emit step_complete as soon as you have all four, using [] for any unmentioned conditions/medications/supplements',
+    2: 'emit step_complete immediately after the user answers whether they have bloodwork (yes or no)',
+    3: 'at least 1 health goal — emit step_complete once you have their goals; use [] for concerns if not mentioned',
+    4: 'at least one food preference answered — emit step_complete with whatever was shared, using [] for anything not mentioned',
+    5: 'days_per_week and gym_access — emit step_complete as soon as you have these two; use [] or defaults for the rest',
+    6: 'wake_time and sleep_time — emit step_complete as soon as you have both; use [] for habits if not mentioned',
   }
 
   const schema = stepSchemas[step]
   const schemaInstruction = schema
-    ? `\n\nWhen you output the step_complete block, the "data" field MUST use EXACTLY these field names:\n${schema}`
+    ? `\n\nThe "data" field in step_complete MUST use EXACTLY these field names:\n${schema}`
     : ''
 
-  return `You are Vitalia's onboarding assistant. You are warm, encouraging, and clinical.
-You are collecting the user's health profile to build their personalized plan.
-Ask ONE question at a time. Be conversational, not form-like.
-When you have collected all data for the current step, output a special JSON block at the END of your message:
-<step_complete>{"step": ${step}, "data": {...collected fields}}</step_complete>
-The frontend will detect this and advance to the next step.${schemaInstruction}
-Current step: ${step}
-Step goal: ${stepGoal}
+  const minRequired = minimumRequired[step]
+    ? `\n\nMINIMUM to emit step_complete for step ${step}: ${minimumRequired[step]}`
+    : ''
 
-Step goals reference:
-Step 1: Collect name, age, height, weight, medical conditions, medications, supplements
-Step 2: Bloodwork upload - ask if they have bloodwork to upload
-Step 3: Collect health concerns and goals (at least 3 goals)
-Step 4: Collect food preferences (dietary restrictions, allergies, favorite cuisines, disliked foods, meal prep days)
-Step 5: Collect workout preferences (goals, activity types, days per week, gym access, home equipment, preferred duration)
-Step 6: Collect routine preferences (wake time, sleep time, morning habits, night habits)
-Step 7: Tell the user to pick their pet companion`
+  return `You are Vitalia's onboarding assistant. You are warm, encouraging, and concise.
+Your job is to collect the user's health profile through natural conversation, then move on.
+
+CRITICAL RULES — follow these exactly:
+1. Ask ONE question at a time. Never list multiple questions in one message.
+2. As soon as you have the MINIMUM REQUIRED fields for this step (see below), immediately append <step_complete> to your message and move on. Do NOT ask "Is there anything else?" or "Shall we move on?" or wait for the user to say "next" — just do it naturally.
+3. For any field the user did not mention, use the default value shown in the schema (usually [] or a sensible number). Never block on optional fields.
+4. Keep your messages short — 1-2 sentences plus the question. Do not over-explain.
+5. When you emit step_complete, write a brief natural closing line for this step first (e.g. "Perfect, got everything I need!"), then append the block on a new line at the very end.
+
+FORMAT for step_complete (output at the END of your message when ready):
+<step_complete>{"step": ${step}, "data": {...collected fields}}</step_complete>
+${minRequired}${schemaInstruction}
+
+Current step: ${step}
+Step goal: ${stepGoal}`
 }
