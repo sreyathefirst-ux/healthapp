@@ -213,9 +213,25 @@ export function buildHealthReportPrompt(
     ? `\nFLAGGED markers for your review: ${endoFlagged.map((m) => `${m.biomarker_name} ${m.value}${m.unit} (ref: ${m.reference_range_low}–${m.reference_range_high})`).join(', ')}`
     : ''
 
+  const med = profile.medical_profile || {}
+  const foodPref = profile.food_preferences || {}
+  const profileBlock = `
+PATIENT PROFILE (you MUST address ALL of the following in your report — do not skip any):
+- Name: ${profile.name || 'Patient'}, Age: ${profile.age || 'unknown'}, Height: ${profile.height_cm || '?'}cm, Weight: ${profile.weight_kg || '?'}kg
+- Medical conditions: ${med.conditions?.join(', ') || 'none reported'}
+- Current medications: ${med.medications?.join(', ') || 'none reported'}
+- Current supplements: ${med.supplements?.join(', ') || 'none reported'}
+- Health concerns raised by patient: ${med.concerns?.join(', ') || 'none reported'}
+- Health goals: ${med.goals?.join(', ') || 'not specified'}
+- What success looks like to this patient: ${med.success_definition || 'not specified'}
+- Dietary restrictions: ${foodPref.restrictions?.join(', ') || 'none'}
+- Food allergies: ${foodPref.allergies?.join(', ') || 'none'}
+- Exercise history: ${med.exercise_history || 'not specified'}`
+
   let prompt = `Generate a comprehensive, deeply personalized health report for this patient. Write it as if from a coordinated specialist care team who have all reviewed this patient's complete profile.
 
-The report must be in Markdown, minimum 600 words. Write with warmth and clinical authority — not overly clinical. Use the patient's name throughout. Write in first-person plural ("we recommend", "our team has reviewed"). Use clear headers, short paragraphs, and bullet points where helpful.
+The report must be in Markdown, minimum 800 words. Write with warmth and clinical authority — not overly clinical. Use the patient's name throughout. Write in first-person plural ("we recommend", "our team has reviewed"). Use clear headers, short paragraphs, and bullet points where helpful.
+${profileBlock}
 ${changesBlock ? `\n${changesBlock}\nIf significant changes are listed above, each relevant specialist section MUST acknowledge these changes and explain what they mean clinically for this patient.\n` : ''}
 FLAGGED BLOODWORK (outside reference range for this patient):
 ${flaggedBlock}
@@ -268,18 +284,38 @@ Address the autoimmune and inflammatory dimensions of this patient's profile. In
 
   prompt += `
 
-## Priority Action Items for This Week
-List 5 specific, high-impact action items this patient should focus on immediately. Each must be directly grounded in their clinical picture — not generic wellness tips. Include a brief clinical rationale for each. Use bullet points.
+## Your Personalized Health Plan
+
+### Supplements Worth Considering
+Review this patient's current supplements (listed in their profile above) and evaluate each one — is it appropriate, dosed correctly, and relevant to their conditions? Then recommend **4–8 additional supplements** specifically justified by their conditions, bloodwork, medication-induced depletions, or concerns. For each recommendation, include:
+- The supplement name (define it in plain English if it is unfamiliar)
+- Exactly why it is relevant to THIS patient (cite their specific condition, marker, goal, or concern)
+- Evidence level: Strong / Moderate / Emerging
+- Suggested dosage range
+- Any interactions with their current medications or existing supplements to be aware of
+Do NOT list generic wellness supplements — every recommendation must be directly tied to something in their profile. Format as bullets.
+
+### Daily Habits & Lifestyle
+List **6–10 specific, actionable habits** tailored to this patient's conditions, concerns, and goals. Each habit must: (a) reference a specific condition, goal, or concern they mentioned, and (b) be concrete enough to act on today. Include sleep hygiene, stress management, movement habits, and any behavior patterns relevant to their health picture. Avoid vague advice — for example, say "practice 4–7–8 breathing for 5 minutes before sleep to lower your cortisol (stress hormone) levels" not "reduce stress".
+
+### Foods to Prioritize and Avoid
+Write two clear lists based on this patient's specific conditions, bloodwork, goals, and dietary preferences (respecting their restrictions and allergies above):
+
+**Prioritize — add these to your plate regularly:**
+List 6–8 specific foods or food groups. For each, write one sentence explaining why it is particularly beneficial for THIS patient's conditions or goals.
+
+**Reduce or avoid — these may be working against you:**
+List 4–6 specific foods or patterns. For each, explain why it is specifically problematic for their conditions or goals — not a generic health claim.
 
 ## A Note From Your Care Team
-A warm, personal closing paragraph addressed to the patient by name. Acknowledge the complexity of their situation. Validate their goals. Express genuine encouragement and explain what having a coordinated specialist team means for their outcomes. 3-4 sentences.
+A warm, personal closing paragraph addressed to the patient by name. Acknowledge every concern and goal they shared during onboarding — show them they were heard. Validate the complexity of managing their health. Express genuine encouragement and explain what having a coordinated specialist team means for their outcomes. 4–5 sentences.
 
 ---
 FORMATTING RULES (mandatory — apply throughout every section):
 - Write for someone who is new to tracking their health. Never assume medical knowledge.
 - When using any medical or technical term (e.g. "LDL", "TSH", "cortisol", "insulin resistance"), always define it in plain English immediately after in parentheses — e.g. "LDL (the 'bad' cholesterol that can clog arteries)"
 - Use **bold** for every key finding, recommendation, and important number or value
-- Use bullet points (–) for all lists of recommendations, findings, or action items — avoid long prose paragraphs
+- Use bullet points for all lists of recommendations, findings, or action items — avoid long prose paragraphs
 - Keep paragraphs short: 2–3 sentences maximum
 - Lead each specialist section with a 1-sentence plain-English summary of the main takeaway before going into details
 - Use everyday language: say "your thyroid is underactive" not "hypothyroidism is present"; say "blood sugar control" not "glycemic regulation"
