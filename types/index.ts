@@ -150,6 +150,61 @@ export interface DailyLog {
   last_seen_at: string
 }
 
+export interface HealthInsightWin {
+  metric: string
+  status: string
+  value: string
+  reference_range: string
+  description: string
+}
+
+export interface HealthInsightPriority {
+  metric: string
+  status: string
+  current_value: string
+  reference_range: string
+  explanation: string
+  target_value: string
+  progress_percent: number
+  recommended_action: string
+}
+
+export interface SpecialistInsight {
+  id: string
+  name: string
+  icon: string
+  content: string
+}
+
+export interface HealthInsights {
+  focus_areas: string[]
+  wins: HealthInsightWin[]
+  priority: HealthInsightPriority
+  specialist_insights: SpecialistInsight[]
+  goals_3_6_months: { metric: string; description: string }[]
+}
+
+export interface ActionPlanSection {
+  title: string
+  description: string
+}
+
+export interface ActionPlan {
+  nutrition: {
+    prioritize: ActionPlanSection
+    avoid: ActionPlanSection
+    key_habit: ActionPlanSection
+    note: string
+  }
+  workout: {
+    frequency: string
+    breakdown: string[]
+    key_focus: string
+    expected_results: { timeline: string; description: string }[]
+  }
+  supplements: { name: string; description: string }[]
+}
+
 export interface WeeklyPlan {
   id: string
   user_id: string
@@ -157,6 +212,8 @@ export interface WeeklyPlan {
   meal_plan: MealPlan | null
   workout_plan: WorkoutPlan | null
   health_report: string | null
+  health_insights: HealthInsights | null
+  action_plan: ActionPlan | null
   grocery_checklist: Record<string, boolean>
   generated_at: string
 }

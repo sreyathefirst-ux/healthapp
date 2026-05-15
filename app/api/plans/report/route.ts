@@ -1,8 +1,9 @@
 import { buildSystemPrompt } from '@/lib/anthropic'
-import { callOpenRouter, MODEL } from '@/lib/openrouter'
+import { callOpenRouter } from '@/lib/openrouter'
 import { buildHealthReportPrompt } from '@/lib/prompts'
 import { createClient } from '@/lib/supabase/server'
 import { fetchFullProfile } from '@/lib/profile'
+import type { HealthInsights, ActionPlan } from '@/types'
 
 function getWeekStartDate(): string {
   const now = new Date()
@@ -66,11 +67,36 @@ export async function POST(_req: Request) {
       return Response.json({ error: 'Failed to generate health report' }, { status: 500 })
     }
 
+    // Strip markdown code fences if the AI wrapped the JSON
+    let cleanText = reportText.trim()
+    if (cleanText.startsWith('```')) {
+      cleanText = cleanText.replace(/^```(?:json)?\s*/, '').replace(/\s*```$/, '')
+    }
+
+    let health_insights: HealthInsights
+    let action_plan: ActionPlan
+    try {
+      const structured = JSON.parse(cleanText)
+      health_insights = structured.health_insights
+      action_plan = structured.action_plan
+      if (!health_insights || !action_plan) throw new Error('Missing health_insights or action_plan')
+    } catch (parseError) {
+      console.error('[report] JSON parse failed:', parseError, '\nRaw (first 500):', cleanText.slice(0, 500))
+      return Response.json({ error: 'Report generation returned invalid format — please try again' }, { status: 500 })
+    }
+
+    // Build markdown fallback for the onboarding results page
+    const health_report = (health_insights.specialist_insights || [])
+      .map((s) => `## From Your ${s.name}\n\n${s.content}\n`)
+      .join('\n')
+
     const { error: saveError } = await supabase.from('weekly_plans').upsert(
       {
         user_id: user.id,
         week_start_date: weekStart,
-        health_report: reportText,
+        health_report,
+        health_insights,
+        action_plan,
         generated_at: new Date().toISOString(),
       },
       { onConflict: 'user_id,week_start_date' }
@@ -81,9 +107,8 @@ export async function POST(_req: Request) {
       return Response.json({ error: saveError.message }, { status: 500 })
     }
 
-    console.log('[report] saved for week', weekStart, '— chars:', reportText.length)
-
-    return Response.json({ success: true, report: reportText })
+    console.log('[report] saved for week', weekStart, '— specialists:', health_insights.specialist_insights?.length)
+    return Response.json({ success: true, report: health_report, health_insights, action_plan })
   } catch (error) {
     console.error('[report] unhandled error:', error)
     return Response.json({ error: 'Internal server error' }, { status: 500 })

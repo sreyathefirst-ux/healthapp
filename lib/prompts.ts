@@ -158,7 +158,6 @@ export function buildHealthReportPrompt(
 ): string {
   const conditions = (profile.medical_profile?.conditions || []).map((c) => c.toLowerCase())
 
-  // Determine which specialists are relevant
   const needsCardiologist =
     hasCondition(conditions, ['heart', 'cardio', 'hypertension', 'cholesterol', 'atherosclerosis', 'arrhythmia']) ||
     isFlagged(bloodwork, ['LDL', 'Cholesterol', 'Triglyceride', 'HDL', 'Non-HDL', 'VLDL', 'Lipoprotein', 'CRP', 'hsCRP'])
@@ -192,162 +191,141 @@ export function buildHealthReportPrompt(
   const flaggedBlock = flaggedSummary(bloodwork)
   const changesBlock = buildChangeSummary(bloodwork, previousBloodwork)
   const hasBloodwork = bloodwork.length > 0
-  const allFlagged = bloodwork.filter((m) => m.is_flagged)
-
-  // Cholesterol routing text for cardiologist
-  const cardioFlagged = allFlagged.filter((m) =>
-    ['LDL', 'Cholesterol', 'Triglyceride', 'HDL', 'CRP', 'hsCRP'].some((k) =>
-      m.biomarker_name.toLowerCase().includes(k.toLowerCase())
-    )
-  )
-  const endoFlagged = allFlagged.filter((m) =>
-    ['TSH', 'T3', 'T4', 'Thyroid', 'HbA1c', 'Glucose', 'Insulin', 'Cortisol', 'DHEA', 'Testosterone', 'Estrogen', 'Progesterone', 'LH', 'FSH'].some(
-      (k) => m.biomarker_name.toLowerCase().includes(k.toLowerCase())
-    )
-  )
-
-  const cardioFlaggedText = cardioFlagged.length > 0
-    ? `\nFLAGGED markers for your review: ${cardioFlagged.map((m) => `${m.biomarker_name} ${m.value}${m.unit} (ref: ${m.reference_range_low}–${m.reference_range_high})`).join(', ')}`
-    : ''
-  const endoFlaggedText = endoFlagged.length > 0
-    ? `\nFLAGGED markers for your review: ${endoFlagged.map((m) => `${m.biomarker_name} ${m.value}${m.unit} (ref: ${m.reference_range_low}–${m.reference_range_high})`).join(', ')}`
-    : ''
 
   const med = profile.medical_profile || {}
   const foodPref = profile.food_preferences || {}
-  const profileBlock = `
-PATIENT PROFILE (you MUST address ALL of the following in your report — do not skip any):
+  const workoutPref = profile.workout_preferences || {}
+
+  const specialists = [
+    {
+      id: 'functional', name: 'Functional Medicine Doctor', icon: 'Stethoscope',
+      scope: `Systemic patterns and root causes — how this patient's conditions, medications, and symptoms interact. Include medication-induced nutrient depletions. NOT: specific foods (Nutritionist), individual hormone markers (Endocrinologist), exercise details (Trainer).`,
+    },
+    {
+      id: 'nutritionist', name: 'Clinical Nutritionist', icon: 'Apple',
+      scope: `Specific foods and nutrients addressing this patient's conditions${hasBloodwork ? ' and bloodwork deficiencies' : ''}. Drug-nutrient interactions for their medications. Respect restrictions (${foodPref.restrictions?.join(', ') || 'none'}) and allergies (${foodPref.allergies?.join(', ') || 'none'}). NOT: supplements, hormone interpretation, general condition connections.`,
+    },
+    {
+      id: 'trainer', name: 'Personal Trainer', icon: 'Dumbbell',
+      scope: `Training structure suited to exercise history (${med.exercise_history || 'unspecified'}) and goals (${workoutPref.goals?.join(', ') || 'not specified'}). Include modifications for their conditions. NOT: nutrition, supplements, medical interpretation.`,
+    },
+    ...(needsEndocrinologist ? [{
+      id: 'endocrinologist', name: 'Endocrinologist', icon: 'Activity',
+      scope: 'Plain-English interpretation of relevant hormonal/metabolic markers. One sentence per marker covering what it is, their value, and what it affects. NOT: diet details, supplements.',
+    }] : []),
+    ...(needsCardiologist ? [{
+      id: 'cardiologist', name: 'Cardiologist', icon: 'Heart',
+      scope: 'Cardiovascular risk, lipid markers, specific targets and timelines. One cross-reference to Nutritionist or Trainer is OK. NOT: diet or exercise specifics.',
+    }] : []),
+    ...(needsGastroenterologist ? [{
+      id: 'gastroenterologist', name: 'Gastroenterologist', icon: 'Shield',
+      scope: 'Digestive condition management, specific trigger foods to avoid, one practical gut-health lifestyle habit. NOT: general nutrition advice, supplements.',
+    }] : []),
+    ...(needsDermatologist ? [{
+      id: 'dermatologist', name: 'Dermatologist', icon: 'Shield',
+      scope: 'Skin condition triggers, topical and environmental factors, one lifestyle recommendation unique to skin health. One cross-reference to Nutritionist or Endocrinologist is OK. NOT: diet or hormone specifics.',
+    }] : []),
+    ...(needsRheumatologist ? [{
+      id: 'rheumatologist', name: 'Rheumatologist', icon: 'Microscope',
+      scope: 'Inflammatory marker interpretation, specific flare triggers to monitor, one evidence-based lifestyle factor for autoimmune activity. NOT: gut health, diet details, exercise specifics.',
+    }] : []),
+  ]
+
+  const specialistLines = specialists
+    .map((s) => `  - id: "${s.id}" | name: "${s.name}" | icon: "${s.icon}" | scope: ${s.scope}`)
+    .join('\n')
+
+  const bloodworkSection = hasBloodwork
+    ? `\nFLAGGED BLOODWORK:\n${flaggedBlock}`
+    : '\nNo bloodwork uploaded yet.'
+  const changesSection = changesBlock ? `\nBLOODWORK CHANGES FROM PREVIOUS TEST:\n${changesBlock}` : ''
+
+  return `You are a coordinated specialist care team. Analyze this patient's complete profile and return a structured JSON health report. Output ONLY valid JSON — no markdown, no code fences, no text before or after the JSON object.
+
+PATIENT PROFILE:
 - Name: ${profile.name || 'Patient'}, Age: ${profile.age || 'unknown'}, Height: ${profile.height_cm || '?'}cm, Weight: ${profile.weight_kg || '?'}kg
 - Medical conditions: ${med.conditions?.join(', ') || 'none reported'}
 - Current medications: ${med.medications?.join(', ') || 'none reported'}
 - Current supplements: ${med.supplements?.join(', ') || 'none reported'}
-- Health concerns raised by patient: ${med.concerns?.join(', ') || 'none reported'}
+- Health concerns: ${med.concerns?.join(', ') || 'none reported'}
 - Health goals: ${med.goals?.join(', ') || 'not specified'}
-- What success looks like to this patient: ${med.success_definition || 'not specified'}
+- Success definition: ${med.success_definition || 'not specified'}
 - Dietary restrictions: ${foodPref.restrictions?.join(', ') || 'none'}
 - Food allergies: ${foodPref.allergies?.join(', ') || 'none'}
-- Exercise history: ${med.exercise_history || 'not specified'}`
+- Exercise history: ${med.exercise_history || 'not specified'}
+- Workout goals: ${workoutPref.goals?.join(', ') || 'not specified'}
+- Workout days/week: ${workoutPref.days_per_week || 'not specified'}
+- Gym access: ${workoutPref.gym_access ? 'yes' : 'no'}
+${bloodworkSection}${changesSection}
 
-  let prompt = `Generate a comprehensive, deeply personalized health report for this patient. Write it as if from a coordinated specialist care team who have all reviewed this patient's complete profile.
+SPECIALIST TEAM FOR THIS PATIENT (use EXACTLY these id/name/icon values in specialist_insights):
+${specialistLines}
 
-The report must be in Markdown, minimum 800 words. Write with warmth and clinical authority — not overly clinical. Use the patient's name throughout. Write in first-person plural ("we recommend", "our team has reviewed"). Use bullet points generously — recommendations should almost always be bulleted, not buried in paragraphs.
-
-CRITICAL: Each specialist must stay strictly within their own domain. Do NOT repeat information covered in other sections. If a topic belongs to another specialist, acknowledge it in one sentence and refer the patient to that section (e.g. "see your Nutritionist section for specific dietary guidance"). Every section must add unique value.
-${profileBlock}
-${changesBlock ? `\n${changesBlock}\nIf significant changes are listed above, each relevant specialist section MUST acknowledge these changes and explain what they mean clinically for this patient.\n` : ''}
-FLAGGED BLOODWORK (outside reference range for this patient):
-${flaggedBlock}
-
----
-
-## From Your Functional Medicine Doctor
-SCOPE: The big picture only — how this patient's conditions, symptoms, and medications interact with each other as a system. What patterns emerge? What is the root-cause thread connecting their issues?
-DO NOT cover: specific foods or meal advice (Nutritionist), individual hormone/metabolic marker interpretation (Endocrinologist), or exercise details (Trainer).
-MUST include: Any nutrient depletions caused by their specific medications (e.g. metformin depletes B12). ${hasBloodwork ? 'Note any patterns across the bloodwork as a whole — not marker-by-marker (leave that to the relevant specialist).' : 'Note what patterns you would watch for given their conditions.'}
-Format: 2–3 short paragraphs + bullet points for key connections and medication-related depletions. 80–120 words.
-
-## From Your Clinical Nutritionist
-SCOPE: Food, nutrients, and eating patterns only — nothing else.
-DO NOT cover: general condition connections (Functional Medicine), gut condition management beyond food choices (Gastroenterologist), hormone interpretation (Endocrinologist), or supplements (covered in the Personalized Health Plan section).
-MUST include: Specific foods and nutrients that directly address this patient's conditions${hasBloodwork ? ' and any bloodwork deficiencies' : ''}. Drug-nutrient interactions for their specific medications that affect what they should eat. Practical guidance respecting their dietary restrictions (${foodPref.restrictions?.join(', ') || 'none'}) and allergies (${foodPref.allergies?.join(', ') || 'none'}).
-Format: mostly bullet points — each bullet names a specific food/nutrient and gives a one-line reason tied to their conditions. 80–100 words.
-
-## From Your Personal Trainer
-SCOPE: Exercise and movement only — nothing else.
-DO NOT cover: nutrition, supplements, or medical interpretation.
-MUST include: A specific training structure recommendation (e.g. frequency, type, intensity) appropriate for their exercise history and conditions. Any modifications required by their health conditions. Expected timeline for seeing their fitness goals. One brief note on what to watch for (e.g. signs to ease off).
-Format: bullet points for training structure, short paragraph for rationale. 70–90 words.`
-
-  if (needsEndocrinologist) {
-    prompt += `
-
-## From Your Endocrinologist
-SCOPE: Hormonal and metabolic markers only — nothing else.${endoFlaggedText}
-DO NOT cover: diet in detail (Nutritionist), general condition connections (Functional Medicine), supplements (Personalized Health Plan).
-MUST include: Plain-English interpretation of each relevant hormonal/metabolic marker and what it means practically for this patient (energy, weight, mood, long-term risk). One clear sentence per marker — what is it, what does their value mean, what does it affect.
-Format: bullet point per relevant marker, then 1–2 sentences on overall hormonal picture. 80–100 words.`
+Return EXACTLY this JSON structure (fill all string values with real content — no placeholders):
+{
+  "health_insights": {
+    "focus_areas": ["string — 3 to 5 items: the patient's main health priorities based on their profile"],
+    "wins": [
+      {
+        "metric": "biomarker name or health dimension going well",
+        "status": "short positive label e.g. Optimal",
+        "value": "actual value with unit, or descriptive phrase if no bloodwork",
+        "reference_range": "reference range or N/A",
+        "description": "1-2 sentences: why this is good specifically for this patient"
+      }
+    ],
+    "priority": {
+      "metric": "single highest-priority area to improve",
+      "status": "short label e.g. Needs Attention",
+      "current_value": "current value with unit",
+      "reference_range": "reference or target range",
+      "explanation": "2-3 sentences explaining why this matters for this patient in plain English",
+      "target_value": "specific target to reach",
+      "progress_percent": 30,
+      "recommended_action": "one specific actionable step"
+    },
+    "specialist_insights": [
+      {
+        "id": "from specialist team above",
+        "name": "from specialist team above",
+        "icon": "from specialist team above",
+        "content": "3-5 bullet points using the • character. Specific findings or recommendations for THIS patient strictly within their scope. 80-120 words total. No repetition across specialists."
+      }
+    ],
+    "goals_3_6_months": [
+      { "metric": "measurable outcome", "description": "1 sentence: what achieving this looks like for this patient" }
+    ]
+  },
+  "action_plan": {
+    "nutrition": {
+      "prioritize": { "title": "short label e.g. Anti-Inflammatory Foods", "description": "specific foods and nutrients to add with reasons tied to this patient's conditions" },
+      "avoid": { "title": "short label", "description": "specific foods or patterns to reduce with reasons tied to this patient's conditions" },
+      "key_habit": { "title": "short label", "description": "one concrete daily nutrition habit for this patient" },
+      "note": "one sentence respecting their restrictions (${foodPref.restrictions?.join(', ') || 'none'}) and allergies (${foodPref.allergies?.join(', ') || 'none'})"
+    },
+    "workout": {
+      "frequency": "e.g. 4x per week",
+      "breakdown": ["3-4 strings e.g. 2x strength training", "1x cardio", "1x mobility"],
+      "key_focus": "most important training focus for this patient's goals and conditions",
+      "expected_results": [
+        { "timeline": "e.g. 4 weeks", "description": "specific result to expect" },
+        { "timeline": "e.g. 3 months", "description": "specific result to expect" }
+      ]
+    },
+    "supplements": [
+      { "name": "supplement name", "description": "why for THIS patient (cite their condition, marker, or goal) plus suggested dosage range and any interactions with their current medications" }
+    ]
   }
+}
 
-  if (needsCardiologist) {
-    prompt += `
-
-## From Your Cardiologist
-SCOPE: Cardiovascular risk only — nothing else.${cardioFlaggedText}
-DO NOT cover: diet in detail ("see Nutritionist section") or exercise in detail ("see Trainer section") — one cross-reference sentence is enough.
-MUST include: Interpretation of lipid markers and any relevant cardiovascular risk factors in plain English. Specific targets to aim for and rough timeline.
-Format: bullets per relevant marker/risk factor, then 1–2 sentences on overall cardiovascular picture. 70–90 words.`
-  }
-
-  if (needsGastroenterologist) {
-    prompt += `
-
-## From Your Gastroenterologist
-SCOPE: Digestive condition management only — nothing else.
-DO NOT cover: general nutrition advice (Nutritionist), gut-skin axis or hormonal connections (those belong to the Dermatologist/Endocrinologist), or autoimmune inflammation (Rheumatologist). Do NOT recommend supplements — that is in the Personalized Health Plan.
-MUST include: What this patient needs to know about managing their specific gut condition. Specific trigger foods or patterns to avoid for their condition. One practical lifestyle or habit recommendation for gut health that goes beyond diet.
-Format: bullet points throughout. 70–90 words.`
-  }
-
-  if (needsDermatologist) {
-    prompt += `
-
-## From Your Dermatologist
-SCOPE: Skin condition management only — nothing else.
-DO NOT cover: diet in detail (one cross-reference to Nutritionist is fine), gut health (Gastroenterologist), or hormonal interpretation (Endocrinologist — one cross-reference sentence is fine).
-MUST include: Specific triggers to identify and avoid for their skin condition. Topical or environmental factors to address. One lifestyle recommendation unique to skin health.
-Format: bullet points throughout. 60–80 words.`
-  }
-
-  if (needsRheumatologist) {
-    prompt += `
-
-## From Your Rheumatologist
-SCOPE: Autoimmune condition and inflammatory markers only — nothing else.
-DO NOT cover: gut health (Gastroenterologist), diet in detail (Nutritionist), or exercise specifics (Trainer — one cross-reference is fine).
-MUST include: Interpretation of any inflammatory markers. Specific flare triggers to monitor for this patient. One evidence-based lifestyle factor that affects autoimmune activity.
-Format: bullet points throughout. 60–80 words.`
-  }
-
-  prompt += `
-
-## Your Personalized Health Plan
-
-### Supplements Worth Considering
-Review this patient's current supplements (listed in their profile above) and evaluate each one — is it appropriate, dosed correctly, and relevant to their conditions? Then recommend **4–8 additional supplements** specifically justified by their conditions, bloodwork, medication-induced depletions, or concerns. For each recommendation, include:
-- The supplement name (define it in plain English if it is unfamiliar)
-- Exactly why it is relevant to THIS patient (cite their specific condition, marker, goal, or concern)
-- Evidence level: Strong / Moderate / Emerging
-- Suggested dosage range
-- Any interactions with their current medications or existing supplements to be aware of
-Do NOT list generic wellness supplements — every recommendation must be directly tied to something in their profile. Format as bullets.
-
-### Daily Habits & Lifestyle
-List **6–10 specific, actionable habits** tailored to this patient's conditions, concerns, and goals. Each habit must: (a) reference a specific condition, goal, or concern they mentioned, and (b) be concrete enough to act on today. Include sleep hygiene, stress management, movement habits, and any behavior patterns relevant to their health picture. Avoid vague advice — for example, say "practice 4–7–8 breathing for 5 minutes before sleep to lower your cortisol (stress hormone) levels" not "reduce stress".
-
-### Foods to Prioritize and Avoid
-Write two clear lists based on this patient's specific conditions, bloodwork, goals, and dietary preferences (respecting their restrictions and allergies above):
-
-**Prioritize — add these to your plate regularly:**
-List 6–8 specific foods or food groups. For each, write one sentence explaining why it is particularly beneficial for THIS patient's conditions or goals.
-
-**Reduce or avoid — these may be working against you:**
-List 4–6 specific foods or patterns. For each, explain why it is specifically problematic for their conditions or goals — not a generic health claim.
-
-## A Note From Your Care Team
-A warm, personal closing paragraph addressed to the patient by name. Acknowledge every concern and goal they shared during onboarding — show them they were heard. Validate the complexity of managing their health. Express genuine encouragement and explain what having a coordinated specialist team means for their outcomes. 4–5 sentences.
-
----
-FORMATTING RULES (mandatory — apply throughout every section):
-- Write for someone who is new to tracking their health. Never assume medical knowledge.
-- When using any medical or technical term (e.g. "LDL", "TSH", "cortisol", "insulin resistance"), always define it in plain English immediately after in parentheses — e.g. "LDL (the 'bad' cholesterol that can clog arteries)"
-- Use **bold** for every key finding, recommendation, and important number or value
-- Use bullet points for all lists of recommendations, findings, or action items — avoid long prose paragraphs
-- Keep paragraphs short: 2–3 sentences maximum
-- Lead each specialist section with a 1-sentence plain-English summary of the main takeaway before going into details
-- Use everyday language: say "your thyroid is underactive" not "hypothyroidism is present"; say "blood sugar control" not "glycemic regulation"
-- Avoid jargon phrases like "inflammatory cascade", "metabolic dysregulation", or "cardiovascular sequelae" — always say what it means`
-
-  return prompt
+RULES — follow strictly:
+- specialist_insights: include EXACTLY the specialists listed above with same id/name/icon. Do NOT add or remove any.
+- wins: 2-4 items. If no bloodwork, use health dimensions going well based on their lifestyle and goals.
+- priority.progress_percent: integer 0-100 (how far current value is toward target). Use 20-40 if no bloodwork.
+- goals_3_6_months: 3-5 measurable outcomes specific to this patient.
+- supplements: 3-5 items. Review current supplements (${med.supplements?.join(', ') || 'none'}) — only recommend what is missing or should be added.
+- No specialist should cover topics belonging to another specialist's scope.
+- All content in plain English. Define medical terms inline (e.g. TSH (thyroid-stimulating hormone)).`
 }
 
 export function buildMealSwapPrompt(
