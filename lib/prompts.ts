@@ -122,6 +122,24 @@ function hasCondition(conditions: string[], keywords: string[]): boolean {
   )
 }
 
+function buildChangeSummary(current: BloodworkRow[], previous: BloodworkRow[]): string {
+  if (previous.length === 0) return ''
+  const changes: string[] = []
+  for (const curr of current) {
+    const prev = previous.find((p) => p.biomarker_name.toLowerCase() === curr.biomarker_name.toLowerCase())
+    if (!prev || prev.value === 0) continue
+    const delta = curr.value - prev.value
+    const pct = Math.abs(delta / prev.value) * 100
+    if (pct < 10) continue
+    const direction = delta > 0 ? 'increased' : 'decreased'
+    const nowStatus = curr.is_flagged ? ' ⚠️ still flagged' : (prev.is_flagged && !curr.is_flagged ? ' ✅ now in range' : '')
+    changes.push(`${curr.biomarker_name}: ${prev.value}${prev.unit} → ${curr.value}${curr.unit} (${direction} ${pct.toFixed(0)}%)${nowStatus}`)
+  }
+  if (changes.length === 0) return ''
+  const prevDate = (previous[0] as BloodworkRow & { upload_date?: string }).upload_date ?? 'previous upload'
+  return `SIGNIFICANT CHANGES SINCE LAST BLOODWORK (${prevDate}):\n${changes.join('\n')}`
+}
+
 function flaggedSummary(markers: BloodworkRow[]): string {
   const flagged = markers.filter((m) => m.is_flagged)
   if (flagged.length === 0) return 'No flagged biomarkers.'
@@ -135,7 +153,8 @@ function flaggedSummary(markers: BloodworkRow[]): string {
 
 export function buildHealthReportPrompt(
   profile: UserProfile,
-  bloodwork: BloodworkRow[]
+  bloodwork: BloodworkRow[],
+  previousBloodwork: BloodworkRow[] = []
 ): string {
   const conditions = (profile.medical_profile?.conditions || []).map((c) => c.toLowerCase())
 
@@ -171,6 +190,7 @@ export function buildHealthReportPrompt(
     isFlagged(bloodwork, ['ANA', 'Anti-', 'Rheumatoid Factor', 'CCP', 'ESR', 'Sed Rate'])
 
   const flaggedBlock = flaggedSummary(bloodwork)
+  const changesBlock = buildChangeSummary(bloodwork, previousBloodwork)
   const hasBloodwork = bloodwork.length > 0
   const allFlagged = bloodwork.filter((m) => m.is_flagged)
 
@@ -196,7 +216,7 @@ export function buildHealthReportPrompt(
   let prompt = `Generate a comprehensive, deeply personalized health report for this patient. Write it as if from a coordinated specialist care team who have all reviewed this patient's complete profile.
 
 The report must be in Markdown, minimum 600 words. Write with warmth and clinical authority — not overly clinical. Use the patient's name throughout. Write in first-person plural ("we recommend", "our team has reviewed"). Use clear headers, short paragraphs, and bullet points where helpful.
-
+${changesBlock ? `\n${changesBlock}\nIf significant changes are listed above, each relevant specialist section MUST acknowledge these changes and explain what they mean clinically for this patient.\n` : ''}
 FLAGGED BLOODWORK (outside reference range for this patient):
 ${flaggedBlock}
 

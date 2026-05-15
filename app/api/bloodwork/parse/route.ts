@@ -1,10 +1,15 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest } from 'next/server'
 
+export const maxDuration = 60
+
 const GOOGLE_AI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash'
 
-const PARSE_PROMPT = `Extract ALL biomarker values from this medical lab report. For each value found, return ONLY this JSON format with no markdown, no backticks, no explanation:
-[{"biomarker_name": "name", "value": NUMBER, "unit": "unit", "reference_range_low": NUMBER, "reference_range_high": NUMBER}, ...]`
+const PARSE_PROMPT = `Extract ALL biomarker values from this medical lab report.
+IMPORTANT: Only extract values that are explicitly printed in the document. Do NOT guess, infer, or estimate any value. If a value is not clearly readable, skip it entirely.
+Return ONLY a JSON array (no markdown, no backticks, no explanation):
+[{"biomarker_name":"string","value":NUMBER,"unit":"string","reference_range_low":NUMBER_OR_NULL,"reference_range_high":NUMBER_OR_NULL},...]
+Range rules: if range is "< X" set low=0 and high=X; if range is "> X" set low=X and high=999999; if no range shown use null for both.`
 
 export async function POST(req: NextRequest) {
   try {
@@ -62,7 +67,7 @@ export async function POST(req: NextRequest) {
           { text: PARSE_PROMPT },
         ],
       }],
-      generationConfig: { maxOutputTokens: 8192 },
+      generationConfig: { maxOutputTokens: 8192, thinkingConfig: { thinkingBudget: 0 } },
     }
 
     console.log('[bloodwork] step 4 — calling Google AI...')
@@ -160,7 +165,9 @@ export async function POST(req: NextRequest) {
     console.log('[bloodwork] step 6 OK — extracted', biomarkers.length, 'biomarkers')
 
     // ── 7. Save to Supabase ───────────────────────────────────────────────────
-    await supabase.from('bloodwork').delete().eq('user_id', user.id)
+    // Only delete records from the same day to preserve historical uploads
+    const today = new Date().toISOString().split('T')[0]
+    await supabase.from('bloodwork').delete().eq('user_id', user.id).eq('upload_date', today)
 
     const rows = biomarkers
       .filter((b) => b.biomarker_name && b.value !== undefined && b.value !== null)

@@ -14,6 +14,14 @@ export default function ProfileSettingsPage() {
   const [saving, setSaving] = useState(false)
   const [uploadingBloodwork, setUploadingBloodwork] = useState(false)
 
+  interface BloodworkRow {
+    id: string; biomarker_name: string; value: number; unit: string
+    reference_range_low: number | null; reference_range_high: number | null
+    is_flagged: boolean; upload_date: string
+  }
+  const [bloodwork, setBloodwork] = useState<BloodworkRow[]>([])
+  const [bloodworkLoading, setBloodworkLoading] = useState(true)
+
   const [profile, setProfile] = useState({
     name: '', age: '', height_cm: '', weight_kg: '',
   })
@@ -33,17 +41,22 @@ export default function ProfileSettingsPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
-      const [uRes, mRes, fRes, wRes] = await Promise.all([
+      const [uRes, mRes, fRes, wRes, bwRes] = await Promise.all([
         supabase.from('users').select('*').eq('id', user.id).maybeSingle(),
         supabase.from('medical_profile').select('*').eq('user_id', user.id).maybeSingle(),
         supabase.from('food_preferences').select('*').eq('user_id', user.id).maybeSingle(),
         supabase.from('workout_preferences').select('*').eq('user_id', user.id).maybeSingle(),
+        supabase.from('bloodwork').select('*').eq('user_id', user.id)
+          .order('upload_date', { ascending: false })
+          .order('biomarker_name', { ascending: true }),
       ])
 
       if (uRes.data) setProfile({ name: uRes.data.name || '', age: String(uRes.data.age || ''), height_cm: String(uRes.data.height_cm || ''), weight_kg: String(uRes.data.weight_kg || '') })
       if (mRes.data) setMedical({ conditions: mRes.data.conditions?.join(', ') || '', medications: mRes.data.medications?.join(', ') || '', supplements: mRes.data.supplements?.join(', ') || '', concerns: mRes.data.concerns?.join(', ') || '', goals: mRes.data.goals?.join(', ') || '', success_definition: mRes.data.success_definition || '' })
       if (fRes.data) setFood({ restrictions: fRes.data.restrictions?.join(', ') || '', allergies: fRes.data.allergies?.join(', ') || '', loved_cuisines: fRes.data.loved_cuisines?.join(', ') || '', disliked_foods: fRes.data.disliked_foods?.join(', ') || '', meal_prep_days: String(fRes.data.meal_prep_days || 0) })
       if (wRes.data) setWorkout({ goals: wRes.data.goals?.join(', ') || '', activity_types: wRes.data.activity_types?.join(', ') || '', days_per_week: String(wRes.data.days_per_week || 3), gym_access: wRes.data.gym_access || false, home_equipment: wRes.data.home_equipment?.join(', ') || '', preferred_duration_mins: String(wRes.data.preferred_duration_mins || 45) })
+      setBloodwork((bwRes.data as BloodworkRow[]) ?? [])
+      setBloodworkLoading(false)
     }
     fetchData()
   }, [])
@@ -80,6 +93,7 @@ export default function ProfileSettingsPage() {
   async function handleBloodworkUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
+    e.target.value = ''
     setUploadingBloodwork(true)
     const formData = new FormData()
     formData.append('file', file)
@@ -87,9 +101,17 @@ export default function ProfileSettingsPage() {
       const res = await fetch('/api/bloodwork/parse', { method: 'POST', body: formData })
       const data = await res.json()
       if (data.biomarkers) {
-        toast(`Bloodwork updated! Found ${data.biomarkers.length} markers.`, 'success')
+        toast(`Bloodwork uploaded! Found ${data.biomarkers.length} markers.`, 'success')
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          const { data: bw } = await supabase.from('bloodwork').select('*').eq('user_id', user.id)
+            .order('upload_date', { ascending: false })
+            .order('biomarker_name', { ascending: true })
+          setBloodwork((bw as BloodworkRow[]) ?? [])
+        }
       } else {
-        toast('Failed to parse bloodwork', 'error')
+        toast(data.error || 'Failed to parse bloodwork', 'error')
       }
     } catch {
       toast('Upload failed', 'error')
@@ -167,10 +189,58 @@ export default function ProfileSettingsPage() {
             <input ref={fileInputRef} type="file" accept=".pdf" onChange={handleBloodworkUpload} className="hidden" />
             <Button variant="secondary" size="sm" onClick={() => fileInputRef.current?.click()} loading={uploadingBloodwork}>
               <Upload size={14} />
-              Re-upload PDF
+              {bloodwork.length > 0 ? 'Upload New PDF' : 'Upload PDF'}
             </Button>
           </div>
-          <p className="text-text-secondary text-sm">Upload your latest blood test results for more personalized recommendations.</p>
+
+          {bloodworkLoading ? (
+            <p className="text-text-secondary text-sm">Loading...</p>
+          ) : bloodwork.length === 0 ? (
+            <p className="text-text-secondary text-sm">Upload your latest blood test results for more personalized recommendations.</p>
+          ) : (() => {
+            const uploadDates = Array.from(new Set(bloodwork.map((b) => b.upload_date))).sort((a, b) => b.localeCompare(a))
+            const latestDate = uploadDates[0]
+            const latestRows = bloodwork.filter((b) => b.upload_date === latestDate)
+            const prevCount = uploadDates.length - 1
+            return (
+              <div>
+                <p className="text-xs text-text-secondary mb-3">
+                  Last uploaded: <span className="font-medium">{latestDate}</span>
+                  {prevCount > 0 && <span className="ml-2 text-text-secondary">· {prevCount} previous upload{prevCount > 1 ? 's' : ''} on record</span>}
+                </p>
+                <div className="overflow-y-auto max-h-80 rounded-xl border border-vitalia-border">
+                  <table className="w-full text-sm">
+                    <thead className="sticky top-0 bg-surface-secondary">
+                      <tr>
+                        <th className="text-left px-3 py-2 font-medium text-text-secondary text-xs">Biomarker</th>
+                        <th className="text-left px-3 py-2 font-medium text-text-secondary text-xs">Result</th>
+                        <th className="text-left px-3 py-2 font-medium text-text-secondary text-xs">Reference</th>
+                        <th className="text-left px-3 py-2 font-medium text-text-secondary text-xs">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {latestRows.map((row) => (
+                        <tr key={row.id} className={row.is_flagged ? 'bg-red-50' : ''}>
+                          <td className="px-3 py-2 font-medium text-text-primary">{row.biomarker_name}</td>
+                          <td className="px-3 py-2 text-text-primary">{row.value} {row.unit}</td>
+                          <td className="px-3 py-2 text-text-secondary">
+                            {row.reference_range_low != null && row.reference_range_high != null
+                              ? `${row.reference_range_low}–${row.reference_range_high}`
+                              : '—'}
+                          </td>
+                          <td className="px-3 py-2">
+                            {row.is_flagged
+                              ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-xs font-medium">⚠ Flagged</span>
+                              : <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-medium">✓ Normal</span>}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )
+          })()}
         </Card>
 
         <Card>

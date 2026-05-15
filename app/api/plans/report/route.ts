@@ -21,19 +21,40 @@ export async function POST(_req: Request) {
     const profile = await fetchFullProfile(supabase, user.id)
     if (!profile) return Response.json({ error: 'Profile not found' }, { status: 404 })
 
-    const { data: bloodwork } = await supabase
+    const { data: latestDateRow } = await supabase
       .from('bloodwork')
-      .select('*')
+      .select('upload_date')
       .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(50)
+      .order('upload_date', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    const latestDate = latestDateRow?.upload_date ?? null
+
+    const [{ data: bloodwork }, { data: prevDateRow }] = await Promise.all([
+      latestDate
+        ? supabase.from('bloodwork').select('*').eq('user_id', user.id).eq('upload_date', latestDate)
+        : Promise.resolve({ data: [] }),
+      latestDate
+        ? supabase.from('bloodwork').select('upload_date').eq('user_id', user.id)
+            .lt('upload_date', latestDate)
+            .order('upload_date', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
+    ])
+
+    const prevDate = (prevDateRow as { upload_date?: string } | null)?.upload_date ?? null
+    const { data: prevBloodwork } = prevDate
+      ? await supabase.from('bloodwork').select('*').eq('user_id', user.id).eq('upload_date', prevDate)
+      : { data: [] }
 
     const bw = bloodwork || []
     const flaggedCount = bw.filter((b) => b.is_flagged).length
-    console.log('[report] generating for', user.id, '—', bw.length, 'markers,', flaggedCount, 'flagged')
+    console.log('[report] generating for', user.id, '—', bw.length, 'markers,', flaggedCount, 'flagged', prevDate ? `| prev: ${prevDate}` : '| no prev')
 
     const systemPrompt = buildSystemPrompt(profile, bw)
-    const reportPrompt = buildHealthReportPrompt(profile, bw)
+    const reportPrompt = buildHealthReportPrompt(profile, bw, prevBloodwork || [])
     const weekStart = getWeekStartDate()
 
     const { text: reportText } = await callOpenRouter(
