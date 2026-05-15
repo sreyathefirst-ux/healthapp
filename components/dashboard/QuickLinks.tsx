@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { UtensilsCrossed, Dumbbell, Sun, Moon, CheckCircle2, ChevronRight } from 'lucide-react'
+import { UtensilsCrossed, Dumbbell, Sun, Moon, CheckCircle2, BarChart2, ChevronRight } from 'lucide-react'
 
 function getRoutineMode(): 'morning' | 'night' {
   const h = new Date().getHours()
@@ -30,9 +30,9 @@ const STATIC_LINKS = [
     href: '/insights',
     label: 'Insights',
     subtitle: 'View insights',
-    icon: CheckCircle2,
-    accent: 'from-blue-100 to-blue-50',
-    iconColor: 'text-blue-600',
+    icon: BarChart2,
+    accent: 'from-teal-100 to-teal-50',
+    iconColor: 'text-teal-600',
   },
 ]
 
