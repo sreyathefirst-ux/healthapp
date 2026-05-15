@@ -47,9 +47,9 @@ function formatSleepAvg(hours: number): string {
 
 function getMonday(date: Date): Date {
   const d = new Date(date)
-  const dow = d.getDay()
-  d.setDate(d.getDate() + (dow === 0 ? -6 : 1 - dow))
-  d.setHours(0, 0, 0, 0)
+  const dow = d.getUTCDay()
+  d.setUTCDate(d.getUTCDate() + (dow === 0 ? -6 : 1 - dow))
+  d.setUTCHours(0, 0, 0, 0)
   return d
 }
 
@@ -293,7 +293,14 @@ function HealthReportTab({ userId }: { userId: string }) {
         .eq('user_id', userId)
         .order('week_start_date', { ascending: false })
       setAvailableWeeks((plans ?? []).map((p: { week_start_date: string }) => p.week_start_date))
-      fetchReports(getMonday(new Date()))
+      const mostRecent = plans?.[0]?.week_start_date
+      if (mostRecent) {
+        const d = new Date(mostRecent + 'T00:00:00Z')
+        setCurrentWeek(d)
+        fetchReports(d)
+      } else {
+        fetchReports(getMonday(new Date()))
+      }
     }
     init()
   }, [userId, fetchReports])

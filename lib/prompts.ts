@@ -230,7 +230,9 @@ PATIENT PROFILE (you MUST address ALL of the following in your report — do not
 
   let prompt = `Generate a comprehensive, deeply personalized health report for this patient. Write it as if from a coordinated specialist care team who have all reviewed this patient's complete profile.
 
-The report must be in Markdown, minimum 800 words. Write with warmth and clinical authority — not overly clinical. Use the patient's name throughout. Write in first-person plural ("we recommend", "our team has reviewed"). Use clear headers, short paragraphs, and bullet points where helpful.
+The report must be in Markdown, minimum 800 words. Write with warmth and clinical authority — not overly clinical. Use the patient's name throughout. Write in first-person plural ("we recommend", "our team has reviewed"). Use bullet points generously — recommendations should almost always be bulleted, not buried in paragraphs.
+
+CRITICAL: Each specialist must stay strictly within their own domain. Do NOT repeat information covered in other sections. If a topic belongs to another specialist, acknowledge it in one sentence and refer the patient to that section (e.g. "see your Nutritionist section for specific dietary guidance"). Every section must add unique value.
 ${profileBlock}
 ${changesBlock ? `\n${changesBlock}\nIf significant changes are listed above, each relevant specialist section MUST acknowledge these changes and explain what they mean clinically for this patient.\n` : ''}
 FLAGGED BLOODWORK (outside reference range for this patient):
@@ -239,47 +241,71 @@ ${flaggedBlock}
 ---
 
 ## From Your Functional Medicine Doctor
-Analyze the patient's full clinical picture holistically: how conditions connect, how medications interact, and what patterns emerge across symptoms and lab values. ${hasBloodwork ? 'Interpret each relevant bloodwork marker and explain what it means in the context of everything else we know.' : 'Address what you would monitor given their conditions.'} Flag any concerning patterns or nutrient depletions from medications. Minimum 120 words.
+SCOPE: The big picture only — how this patient's conditions, symptoms, and medications interact with each other as a system. What patterns emerge? What is the root-cause thread connecting their issues?
+DO NOT cover: specific foods or meal advice (Nutritionist), individual hormone/metabolic marker interpretation (Endocrinologist), or exercise details (Trainer).
+MUST include: Any nutrient depletions caused by their specific medications (e.g. metformin depletes B12). ${hasBloodwork ? 'Note any patterns across the bloodwork as a whole — not marker-by-marker (leave that to the relevant specialist).' : 'Note what patterns you would watch for given their conditions.'}
+Format: 2–3 short paragraphs + bullet points for key connections and medication-related depletions. 80–120 words.
 
 ## From Your Clinical Nutritionist
-Provide specific, evidence-based nutritional guidance grounded in this patient's conditions, ${hasBloodwork ? 'bloodwork, ' : ''}medications (including drug-nutrient interactions), allergies, and food preferences. Name specific nutrients, foods, or dietary patterns and explain precisely why they are recommended for this individual. Address any deficiencies suggested by ${hasBloodwork ? 'bloodwork or ' : ''}conditions. Reference their dietary restrictions and preferences. Minimum 120 words.
+SCOPE: Food, nutrients, and eating patterns only — nothing else.
+DO NOT cover: general condition connections (Functional Medicine), gut condition management beyond food choices (Gastroenterologist), hormone interpretation (Endocrinologist), or supplements (covered in the Personalized Health Plan section).
+MUST include: Specific foods and nutrients that directly address this patient's conditions${hasBloodwork ? ' and any bloodwork deficiencies' : ''}. Drug-nutrient interactions for their specific medications that affect what they should eat. Practical guidance respecting their dietary restrictions (${foodPref.restrictions?.join(', ') || 'none'}) and allergies (${foodPref.allergies?.join(', ') || 'none'}).
+Format: mostly bullet points — each bullet names a specific food/nutrient and gives a one-line reason tied to their conditions. 80–100 words.
 
 ## From Your Personal Trainer
-Assess this patient's fitness starting point given their conditions, exercise history, and goals. Explain the training approach designed for them and why it is specifically appropriate — including any modifications for health conditions, joint concerns, or medication side effects. Outline expected physiological adaptations and timeline. Minimum 100 words.`
+SCOPE: Exercise and movement only — nothing else.
+DO NOT cover: nutrition, supplements, or medical interpretation.
+MUST include: A specific training structure recommendation (e.g. frequency, type, intensity) appropriate for their exercise history and conditions. Any modifications required by their health conditions. Expected timeline for seeing their fitness goals. One brief note on what to watch for (e.g. signs to ease off).
+Format: bullet points for training structure, short paragraph for rationale. 70–90 words.`
 
   if (needsEndocrinologist) {
     prompt += `
 
 ## From Your Endocrinologist
-Address hormonal, metabolic, and endocrine dimensions of this patient's profile.${endoFlaggedText} Interpret relevant biomarkers with clinical precision — what these values mean for their energy, weight, mood, and long-term risk. Connect the endocrine picture to their conditions, medications, and symptoms. Minimum 120 words.`
+SCOPE: Hormonal and metabolic markers only — nothing else.${endoFlaggedText}
+DO NOT cover: diet in detail (Nutritionist), general condition connections (Functional Medicine), supplements (Personalized Health Plan).
+MUST include: Plain-English interpretation of each relevant hormonal/metabolic marker and what it means practically for this patient (energy, weight, mood, long-term risk). One clear sentence per marker — what is it, what does their value mean, what does it affect.
+Format: bullet point per relevant marker, then 1–2 sentences on overall hormonal picture. 80–100 words.`
   }
 
   if (needsCardiologist) {
     prompt += `
 
 ## From Your Cardiologist
-Review this patient's cardiovascular risk profile.${cardioFlaggedText} Interpret their lipid panel and relevant markers in clinical context. Explain cardiovascular risk factors present and what we recommend to address them. Be specific about targets and timeline. Minimum 100 words.`
+SCOPE: Cardiovascular risk only — nothing else.${cardioFlaggedText}
+DO NOT cover: diet in detail ("see Nutritionist section") or exercise in detail ("see Trainer section") — one cross-reference sentence is enough.
+MUST include: Interpretation of lipid markers and any relevant cardiovascular risk factors in plain English. Specific targets to aim for and rough timeline.
+Format: bullets per relevant marker/risk factor, then 1–2 sentences on overall cardiovascular picture. 70–90 words.`
   }
 
   if (needsGastroenterologist) {
     prompt += `
 
 ## From Your Gastroenterologist
-Address this patient's digestive health given their conditions. Explain the gut-systemic connections relevant to their profile. Provide specific guidance on diet, supplements, or lifestyle modifications for their gut condition. Minimum 100 words.`
+SCOPE: Digestive condition management only — nothing else.
+DO NOT cover: general nutrition advice (Nutritionist), gut-skin axis or hormonal connections (those belong to the Dermatologist/Endocrinologist), or autoimmune inflammation (Rheumatologist). Do NOT recommend supplements — that is in the Personalized Health Plan.
+MUST include: What this patient needs to know about managing their specific gut condition. Specific trigger foods or patterns to avoid for their condition. One practical lifestyle or habit recommendation for gut health that goes beyond diet.
+Format: bullet points throughout. 70–90 words.`
   }
 
   if (needsDermatologist) {
     prompt += `
 
 ## From Your Dermatologist
-Address the patient's skin condition in the context of their full health picture — including gut-skin axis, hormonal influences, and nutritional factors that may be contributing. Provide specific guidance grounded in their lab work and conditions. Minimum 80 words.`
+SCOPE: Skin condition management only — nothing else.
+DO NOT cover: diet in detail (one cross-reference to Nutritionist is fine), gut health (Gastroenterologist), or hormonal interpretation (Endocrinologist — one cross-reference sentence is fine).
+MUST include: Specific triggers to identify and avoid for their skin condition. Topical or environmental factors to address. One lifestyle recommendation unique to skin health.
+Format: bullet points throughout. 60–80 words.`
   }
 
   if (needsRheumatologist) {
     prompt += `
 
 ## From Your Rheumatologist
-Address the autoimmune and inflammatory dimensions of this patient's profile. Interpret relevant inflammatory markers and explain the connections between their autoimmune condition, lifestyle, and the plan we've designed. Minimum 80 words.`
+SCOPE: Autoimmune condition and inflammatory markers only — nothing else.
+DO NOT cover: gut health (Gastroenterologist), diet in detail (Nutritionist), or exercise specifics (Trainer — one cross-reference is fine).
+MUST include: Interpretation of any inflammatory markers. Specific flare triggers to monitor for this patient. One evidence-based lifestyle factor that affects autoimmune activity.
+Format: bullet points throughout. 60–80 words.`
   }
 
   prompt += `
