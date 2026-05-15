@@ -31,8 +31,8 @@ const STATIC_LINKS = [
     label: 'Insights',
     subtitle: 'View insights',
     icon: BarChart2,
-    accent: 'from-teal-100 to-teal-50',
-    iconColor: 'text-teal-600',
+    accent: 'from-blue-100 to-blue-50',
+    iconColor: 'text-blue-600',
   },
 ]
 
