@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { Home, UtensilsCrossed, Dumbbell, CheckCircle2, Settings, LogOut } from 'lucide-react'
+import { Home, UtensilsCrossed, Dumbbell, CheckCircle2, BarChart2, Settings, LogOut } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
 const navItems = [
@@ -11,6 +11,7 @@ const navItems = [
   { href: '/meal-plan', label: 'Meal Plan', icon: UtensilsCrossed },
   { href: '/workout-plan', label: 'Workout', icon: Dumbbell },
   { href: '/routine/morning', label: 'Routine', icon: CheckCircle2 },
+  { href: '/insights', label: 'Insights', icon: BarChart2 },
   { href: '/settings', label: 'Settings', icon: Settings },
 ]
 
