@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { AppShell } from '@/components/layout/AppShell'
 import { createClient } from '@/lib/supabase/client'
 import { Skeleton } from '@/components/ui/Skeleton'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import {
   AreaChart, Area, BarChart, Bar, XAxis, ReferenceLine,
@@ -238,25 +238,49 @@ function WaterCard({ data }: { data: DayData[] }) {
 
 // ── Health Report tab ──────────────────────────────────────────────────────────
 
+type ReportSubTab = 'weekly' | 'overview'
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const reportMarkdownComponents: any = {
+  h1: ({ children }: { children: React.ReactNode }) => <h1 style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 700, fontSize: 22, color: '#1A1A2E', margin: '24px 0 12px' }}>{children}</h1>,
+  h2: ({ children }: { children: React.ReactNode }) => <h2 style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 700, fontSize: 18, color: '#1A1A2E', margin: '20px 0 10px', paddingBottom: 6, borderBottom: '1px solid #EBEBF0' }}>{children}</h2>,
+  h3: ({ children }: { children: React.ReactNode }) => <h3 style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 600, fontSize: 16, color: '#1A1A2E', margin: '16px 0 8px' }}>{children}</h3>,
+  p: ({ children }: { children: React.ReactNode }) => <p style={{ margin: '0 0 12px 0' }}>{children}</p>,
+  ul: ({ children }: { children: React.ReactNode }) => <ul style={{ paddingLeft: 20, margin: '0 0 12px 0' }}>{children}</ul>,
+  ol: ({ children }: { children: React.ReactNode }) => <ol style={{ paddingLeft: 20, margin: '0 0 12px 0' }}>{children}</ol>,
+  li: ({ children }: { children: React.ReactNode }) => <li style={{ marginBottom: 6 }}>{children}</li>,
+  strong: ({ children }: { children: React.ReactNode }) => <strong style={{ fontWeight: 600, color: '#1A1A2E' }}>{children}</strong>,
+  hr: () => <hr style={{ border: 'none', borderTop: '1px solid #EBEBF0', margin: '20px 0' }} />,
+}
+
 function HealthReportTab({ userId }: { userId: string }) {
-  const router = useRouter()
+  const [subTab, setSubTab] = useState<ReportSubTab>('weekly')
   const [reportLoading, setReportLoading] = useState(true)
-  const [report, setReport] = useState<string | null>(null)
+  const [healthReport, setHealthReport] = useState<string | null>(null)
+  const [weeklyReport, setWeeklyReport] = useState<string | null>(null)
   const [currentWeek, setCurrentWeek] = useState<Date>(() => getMonday(new Date()))
   const [availableWeeks, setAvailableWeeks] = useState<string[]>([])
+  const [regenerating, setRegenerating] = useState(false)
+  const [toast, setToast] = useState<string | null>(null)
 
   const isCurrentWeek = toISO(getMonday(new Date())) === toISO(currentWeek)
 
-  const fetchReport = useCallback(async (monday: Date) => {
+  function showToast(msg: string) {
+    setToast(msg)
+    setTimeout(() => setToast(null), 4000)
+  }
+
+  const fetchReports = useCallback(async (monday: Date) => {
     setReportLoading(true)
     const supabase = createClient()
     const { data } = await supabase
       .from('weekly_plans')
-      .select('health_report')
+      .select('health_report, weekly_progress_report')
       .eq('user_id', userId)
       .eq('week_start_date', toISO(monday))
       .maybeSingle()
-    setReport(data?.health_report ?? null)
+    setHealthReport(data?.health_report ?? null)
+    setWeeklyReport(data?.weekly_progress_report ?? null)
     setReportLoading(false)
   }, [userId])
 
@@ -269,16 +293,16 @@ function HealthReportTab({ userId }: { userId: string }) {
         .eq('user_id', userId)
         .order('week_start_date', { ascending: false })
       setAvailableWeeks((plans ?? []).map((p: { week_start_date: string }) => p.week_start_date))
-      fetchReport(getMonday(new Date()))
+      fetchReports(getMonday(new Date()))
     }
     init()
-  }, [userId, fetchReport])
+  }, [userId, fetchReports])
 
   function prevWeek() {
     const prev = new Date(currentWeek)
     prev.setDate(prev.getDate() - 7)
     setCurrentWeek(prev)
-    fetchReport(prev)
+    fetchReports(prev)
   }
 
   function nextWeek() {
@@ -286,38 +310,92 @@ function HealthReportTab({ userId }: { userId: string }) {
     const next = new Date(currentWeek)
     next.setDate(next.getDate() + 7)
     setCurrentWeek(next)
-    fetchReport(next)
+    fetchReports(next)
+  }
+
+  async function handleRegenerate() {
+    if (!isCurrentWeek) return
+    setRegenerating(true)
+    const endpoint = subTab === 'weekly' ? '/api/plans/weekly-progress' : '/api/plans/report'
+    showToast(subTab === 'weekly' ? 'Generating weekly check-in…' : 'Generating health overview… up to 60s')
+    try {
+      const res = await fetch(endpoint, { method: 'POST' })
+      const data = await res.json()
+      if (data.success) {
+        if (subTab === 'weekly') setWeeklyReport(data.report)
+        else setHealthReport(data.report)
+        showToast('Done!')
+      } else {
+        showToast('Generation failed — try again')
+      }
+    } catch {
+      showToast('Something went wrong')
+    } finally {
+      setRegenerating(false)
+    }
   }
 
   const hasPrev = availableWeeks.some(w => w < toISO(currentWeek))
+  const activeReport = subTab === 'weekly' ? weeklyReport : healthReport
 
   return (
     <div>
+      {/* Inline toast */}
+      {toast && (
+        <div style={{ background: '#1A1A2E', color: 'white', borderRadius: 10, padding: '10px 16px', fontSize: 13, marginBottom: 16, textAlign: 'center' }}>
+          {toast}
+        </div>
+      )}
+
+      {/* Sub-tab row + Regenerate */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, gap: 12 }}>
+        <div style={{ display: 'flex', background: '#F5F5F8', borderRadius: 12, padding: 3, gap: 2, flex: 1 }}>
+          {(['weekly', 'overview'] as ReportSubTab[]).map((t) => (
+            <button
+              key={t}
+              onClick={() => setSubTab(t)}
+              style={{
+                flex: 1, padding: '7px 8px', borderRadius: 9, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600,
+                fontFamily: "'DM Sans', sans-serif",
+                background: subTab === t ? 'white' : 'transparent',
+                color: subTab === t ? '#1A1A2E' : '#9B9BAA',
+                boxShadow: subTab === t ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
+                transition: 'all 0.15s',
+              }}
+            >
+              {t === 'weekly' ? 'Weekly Check-in' : 'Health Overview'}
+            </button>
+          ))}
+        </div>
+        {isCurrentWeek && (
+          <button
+            onClick={handleRegenerate}
+            disabled={regenerating}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 5, padding: '8px 12px', borderRadius: 10,
+              border: '1.5px solid #EBEBF0', background: 'white', cursor: regenerating ? 'not-allowed' : 'pointer',
+              fontSize: 13, fontWeight: 600, color: '#1A1A2E', fontFamily: "'DM Sans', sans-serif",
+              opacity: regenerating ? 0.6 : 1, flexShrink: 0,
+            }}
+            aria-label="Regenerate report"
+          >
+            <RefreshCw size={14} style={{ animation: regenerating ? 'spin 1s linear infinite' : 'none' }} />
+            Regenerate
+          </button>
+        )}
+      </div>
+
       {/* Week selector */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 28 }}>
-        <button
-          onClick={prevWeek}
-          disabled={!hasPrev}
-          aria-label="Previous week"
-          style={{
-            background: 'none', border: 'none', padding: 6, display: 'flex', borderRadius: 8,
-            cursor: hasPrev ? 'pointer' : 'not-allowed', opacity: hasPrev ? 1 : 0.3,
-          }}
-        >
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 24 }}>
+        <button onClick={prevWeek} disabled={!hasPrev} aria-label="Previous week"
+          style={{ background: 'none', border: 'none', padding: 6, display: 'flex', borderRadius: 8, cursor: hasPrev ? 'pointer' : 'not-allowed', opacity: hasPrev ? 1 : 0.3 }}>
           <ChevronLeft size={20} color="#1A1A2E" />
         </button>
         <span style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: 14, color: '#1A1A2E', minWidth: 160, textAlign: 'center' }}>
           Week of {formatWeekLabel(currentWeek)}
         </span>
-        <button
-          onClick={nextWeek}
-          disabled={isCurrentWeek}
-          aria-label="Next week"
-          style={{
-            background: 'none', border: 'none', padding: 6, display: 'flex', borderRadius: 8,
-            cursor: isCurrentWeek ? 'not-allowed' : 'pointer', opacity: isCurrentWeek ? 0.3 : 1,
-          }}
-        >
+        <button onClick={nextWeek} disabled={isCurrentWeek} aria-label="Next week"
+          style={{ background: 'none', border: 'none', padding: 6, display: 'flex', borderRadius: 8, cursor: isCurrentWeek ? 'not-allowed' : 'pointer', opacity: isCurrentWeek ? 0.3 : 1 }}>
           <ChevronRight size={20} color="#1A1A2E" />
         </button>
       </div>
@@ -331,28 +409,39 @@ function HealthReportTab({ userId }: { userId: string }) {
           <Skeleton className="h-4 w-full" />
           <Skeleton className="h-4 w-2/3" />
         </div>
-      ) : report ? (
-        <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, lineHeight: 1.7, color: '#1A1A2E' }}>
-          <ReactMarkdown
-            components={{
-              h1: ({ children }) => <h1 style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 700, fontSize: 22, color: '#1A1A2E', margin: '24px 0 12px' }}>{children}</h1>,
-              h2: ({ children }) => <h2 style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 700, fontSize: 18, color: '#1A1A2E', margin: '20px 0 10px' }}>{children}</h2>,
-              h3: ({ children }) => <h3 style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 600, fontSize: 16, color: '#1A1A2E', margin: '16px 0 8px' }}>{children}</h3>,
-              p: ({ children }) => <p style={{ margin: '0 0 12px 0' }}>{children}</p>,
-              ul: ({ children }) => <ul style={{ paddingLeft: 20, margin: '0 0 12px 0' }}>{children}</ul>,
-              ol: ({ children }) => <ol style={{ paddingLeft: 20, margin: '0 0 12px 0' }}>{children}</ol>,
-              li: ({ children }) => <li style={{ marginBottom: 4 }}>{children}</li>,
-              strong: ({ children }) => <strong style={{ fontWeight: 600 }}>{children}</strong>,
-              hr: () => <hr style={{ border: 'none', borderTop: '1px solid #EBEBF0', margin: '20px 0' }} />,
-            }}
-          >
-            {report}
+      ) : activeReport ? (
+        <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, lineHeight: 1.7, color: '#3A3A4A' }}>
+          <ReactMarkdown components={reportMarkdownComponents}>
+            {activeReport}
           </ReactMarkdown>
+          {subTab === 'overview' && (
+            <p style={{ fontSize: 11, color: '#9B9BAA', marginTop: 24, lineHeight: 1.5 }}>
+              <strong>Medical Disclaimer:</strong> This report is AI-generated for informational purposes only. Always consult a qualified healthcare provider before making changes to your health regimen.
+            </p>
+          )}
         </div>
       ) : (
-        <p style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 400, fontSize: 14, color: '#9B9BAA', textAlign: 'center', marginTop: 48 }}>
-          Your health report will be generated this Saturday.
-        </p>
+        <div style={{ textAlign: 'center', marginTop: 48 }}>
+          <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: '#9B9BAA', marginBottom: 16 }}>
+            {subTab === 'weekly'
+              ? 'No weekly check-in yet for this week.'
+              : 'No health overview yet.'}
+          </p>
+          {isCurrentWeek && (
+            <button
+              onClick={handleRegenerate}
+              disabled={regenerating}
+              style={{
+                padding: '10px 20px', borderRadius: 12, border: 'none', cursor: 'pointer',
+                background: 'linear-gradient(135deg, #10b981, #9333ea)', color: 'white',
+                fontSize: 14, fontWeight: 600, fontFamily: "'DM Sans', sans-serif",
+                opacity: regenerating ? 0.7 : 1,
+              }}
+            >
+              {regenerating ? 'Generating…' : 'Generate Now'}
+            </button>
+          )}
+        </div>
       )}
     </div>
   )
