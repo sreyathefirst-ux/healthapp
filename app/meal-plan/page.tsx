@@ -32,6 +32,41 @@ function normalizePlan(raw: unknown): MealPlan | null {
   return { ...p, days: normalizedDays } as MealPlan
 }
 
+function MacroRing({
+  value, max, color, label, unit, size = 88,
+}: {
+  value: number; max: number; color: string; label: string; unit: string; size?: number
+}) {
+  const r = size * 0.39
+  const sw = size * 0.09
+  const cx = size / 2
+  const circ = 2 * Math.PI * r
+  const dash = Math.min(value / max, 1) * circ
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        <circle cx={cx} cy={cx} r={r} fill="none" stroke="#EBEBF0" strokeWidth={sw} />
+        <circle cx={cx} cy={cx} r={r} fill="none" stroke={color} strokeWidth={sw}
+          strokeLinecap="round"
+          strokeDasharray={`${dash} ${circ}`}
+          transform={`rotate(-90 ${cx} ${cx})`} />
+        <text x={cx} y={cx - 1} textAnchor="middle" dominantBaseline="auto"
+          style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 700, fontSize: size * 0.21, fill: '#1A1A2E' }}>
+          {value}
+        </text>
+        <text x={cx} y={cx + size * 0.17} textAnchor="middle" dominantBaseline="auto"
+          style={{ fontFamily: "'DM Sans', sans-serif", fontSize: size * 0.135, fill: '#9B9BAA' }}>
+          {unit}
+        </text>
+      </svg>
+      <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: '#6B6B8A', fontWeight: 500 }}>
+        {label}
+      </span>
+    </div>
+  )
+}
+
 function getWeekStartDate(offset = 0): string {
   const now = new Date()
   now.setUTCDate(now.getUTCDate() + offset * 7)
@@ -315,9 +350,11 @@ export default function MealPlanPage() {
   const weekStart = getWeekStartDate(weekOffset)
   const dayMeals = plan?.days?.[selectedDay] as DayMeals | undefined
 
-  const totalCalories = dayMeals
-    ? (['breakfast', 'lunch', 'dinner', 'snack'] as const).reduce((sum, mt) => sum + (dayMeals[mt]?.calories ?? 0), 0)
-    : 0
+  const MEAL_TYPES = ['breakfast', 'lunch', 'dinner', 'snack'] as const
+  const totalCalories = dayMeals ? MEAL_TYPES.reduce((s, mt) => s + (dayMeals[mt]?.calories ?? 0), 0) : 0
+  const totalProtein  = dayMeals ? MEAL_TYPES.reduce((s, mt) => s + (dayMeals[mt]?.protein_g ?? 0), 0) : 0
+  const totalCarbs    = dayMeals ? MEAL_TYPES.reduce((s, mt) => s + (dayMeals[mt]?.carbs_g ?? 0), 0) : 0
+  const totalFat      = dayMeals ? MEAL_TYPES.reduce((s, mt) => s + (dayMeals[mt]?.fat_g ?? 0), 0) : 0
 
   // Full-page empty state for first-time users (current week, no plan)
   if (!loading && !plan && weekOffset === 0 && !fetchError) {
@@ -355,13 +392,17 @@ export default function MealPlanPage() {
           )}
         </div>
 
-        {/* Daily calories — shown when meals are loaded */}
+        {/* Daily nutrition summary */}
         {dayMeals && !loading && (
-          <div className="p-6 bg-gradient-to-r from-orange-50 to-orange-100 rounded-2xl border border-orange-200">
-            <p className="text-text-secondary text-sm font-medium mb-1">Total Daily Calories</p>
-            <div className="flex items-baseline gap-2">
-              <span className="text-4xl font-bold text-orange-600">{totalCalories}</span>
-              <span className="text-base text-orange-600 font-semibold">kcal</span>
+          <div className="bg-white rounded-2xl p-6 shadow-card border border-vitalia-border">
+            <p style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 700, fontSize: 18, color: '#1A1A2E', marginBottom: 20 }}>
+              Nutrition Summary
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'flex-start' }}>
+              <MacroRing value={totalCalories} max={2000} color="#10b981" label="Calories" unit="kcal" />
+              <MacroRing value={Math.round(totalProtein)} max={50} color="#60a5fa" label="Protein" unit="g" />
+              <MacroRing value={Math.round(totalCarbs)} max={250} color="#f97316" label="Carbs" unit="g" />
+              <MacroRing value={Math.round(totalFat)} max={65} color="#a855f7" label="Fat" unit="g" />
             </div>
           </div>
         )}

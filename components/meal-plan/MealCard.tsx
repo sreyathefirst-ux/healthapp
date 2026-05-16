@@ -23,6 +23,41 @@ const mealEmoji: Record<string, string> = {
   snack: '🍎',
 }
 
+function MacroRing({
+  value, max, color, label, unit, size = 88,
+}: {
+  value: number; max: number; color: string; label: string; unit: string; size?: number
+}) {
+  const r = size * 0.39
+  const sw = size * 0.09
+  const cx = size / 2
+  const circ = 2 * Math.PI * r
+  const dash = Math.min(value / max, 1) * circ
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        <circle cx={cx} cy={cx} r={r} fill="none" stroke="#EBEBF0" strokeWidth={sw} />
+        <circle cx={cx} cy={cx} r={r} fill="none" stroke={color} strokeWidth={sw}
+          strokeLinecap="round"
+          strokeDasharray={`${dash} ${circ}`}
+          transform={`rotate(-90 ${cx} ${cx})`} />
+        <text x={cx} y={cx - 1} textAnchor="middle" dominantBaseline="auto"
+          style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 700, fontSize: size * 0.21, fill: '#1A1A2E' }}>
+          {value}
+        </text>
+        <text x={cx} y={cx + size * 0.17} textAnchor="middle" dominantBaseline="auto"
+          style={{ fontFamily: "'DM Sans', sans-serif", fontSize: size * 0.135, fill: '#9B9BAA' }}>
+          {unit}
+        </text>
+      </svg>
+      <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: '#6B6B8A', fontWeight: 500 }}>
+        {label}
+      </span>
+    </div>
+  )
+}
+
 export function MealCard({ meal, mealType, day, logStatus, onSwap, onReplace, onLog, onViewRecipe }: MealCardProps) {
   const [imageError, setImageError] = useState(false)
 
@@ -79,25 +114,12 @@ export function MealCard({ meal, mealType, day, logStatus, onSwap, onReplace, on
           </details>
         </div>
 
-        {/* Nutrition chips */}
-        <div className="flex flex-wrap gap-2 mb-5 pb-5 border-b border-slate-200">
-          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-100 rounded-lg border border-orange-200">
-            <span>🔥</span>
-            <span className="font-semibold text-orange-900 text-sm">{meal.calories}</span>
-            <span className="text-orange-700 text-xs">cal</span>
-          </div>
-          <div className="px-3 py-1.5 bg-red-100 rounded-lg border border-red-200 text-sm font-semibold text-red-900">
-            P: {meal.protein_g}g
-          </div>
-          <div className="px-3 py-1.5 bg-blue-100 rounded-lg border border-blue-200 text-sm font-semibold text-blue-900">
-            C: {meal.carbs_g}g
-          </div>
-          <div className="px-3 py-1.5 bg-yellow-100 rounded-lg border border-yellow-200 text-sm font-semibold text-yellow-900">
-            F: {meal.fat_g}g
-          </div>
-          <div className="px-3 py-1.5 bg-purple-100 rounded-lg border border-purple-200 text-sm font-semibold text-purple-900">
-            Fiber: {meal.fiber_g}g
-          </div>
+        {/* Nutrition rings */}
+        <div style={{ display: 'flex', justifyContent: 'space-around', marginBottom: 20, paddingBottom: 20, borderBottom: '1px solid #f1f5f9' }}>
+          <MacroRing value={meal.calories} max={700} color="#10b981" label="Cal" unit="kcal" size={72} />
+          <MacroRing value={meal.protein_g} max={40} color="#60a5fa" label="Protein" unit="g" size={72} />
+          <MacroRing value={meal.carbs_g} max={80} color="#f97316" label="Carbs" unit="g" size={72} />
+          <MacroRing value={meal.fat_g} max={30} color="#a855f7" label="Fat" unit="g" size={72} />
         </div>
 
         {/* Log + Replace/Swap */}
