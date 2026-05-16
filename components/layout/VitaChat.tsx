@@ -67,41 +67,67 @@ export function VitaChat() {
   useEffect(() => { checkInModeRef.current = checkInMode }, [checkInMode])
   useEffect(() => { checkInStepRef.current = checkInStep }, [checkInStep])
 
-  // ── Auth + badge check on mount ─────────────────────────────────────────────
+  // ── Auth ────────────────────────────────────────────────────────────────────
   useEffect(() => {
-    const supabase = createClient()
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
-      if (!user) return
-      setUserId(user.id)
+    createClient().auth.getUser().then(({ data: { user } }) => {
+      if (user) setUserId(user.id)
+    })
+  }, [])
 
+  // ── Badge evaluation — runs on mount and every 60s ───────────────────────
+  useEffect(() => {
+    if (!userId) return
+
+    let cancelled = false
+
+    async function evaluateBadge() {
+      if (cancelled) return
+      const supabase = createClient()
       const [routineRes, logRes] = await Promise.all([
         supabase
           .from('routine_preferences')
           .select('wake_time, sleep_time')
-          .eq('user_id', user.id)
+          .eq('user_id', userId!)
           .maybeSingle(),
         supabase
           .from('daily_logs')
           .select('morning_checkin_done, night_checkin_done')
-          .eq('user_id', user.id)
+          .eq('user_id', userId!)
           .eq('date', todayISO())
           .maybeSingle(),
       ])
+      if (cancelled) return
 
       const wake = routineRes.data?.wake_time || '07:00'
       const sleep = routineRes.data?.sleep_time || '23:00'
-      // Default to done=true if no log record (don't spam badge on first day)
-      const morningDone = logRes.data?.morning_checkin_done ?? true
-      const nightDone = logRes.data?.night_checkin_done ?? true
+      // Default false — no log record means check-in not yet done today
+      const morningDone = logRes.data?.morning_checkin_done ?? false
+      const nightDone = logRes.data?.night_checkin_done ?? false
 
       const h = new Date().getHours()
       const wakeH = parseHour(wake)
       const sleepH = parseHour(sleep)
+      const nightStartH = Math.max(0, sleepH - 1)
 
-      if (!morningDone && h >= wakeH && h < wakeH + 3) setBadge('morning')
-      else if (!nightDone && h >= Math.max(0, sleepH - 1) && h <= sleepH) setBadge('night')
-    })
-  }, [])
+      // Morning: from wake time until 1 hour before sleep
+      // Night: from 1 hour before sleep until 3am
+      if (!morningDone && h >= wakeH && h < nightStartH) {
+        setBadge('morning')
+      } else if (!nightDone && (h >= nightStartH || h < 3)) {
+        setBadge('night')
+      } else {
+        setBadge(prev => (prev === 'morning' || prev === 'night') ? null : prev)
+      }
+    }
+
+    evaluateBadge()
+    const interval = setInterval(evaluateBadge, 60_000)
+
+    return () => {
+      cancelled = true
+      clearInterval(interval)
+    }
+  }, [userId])
 
   // ── Panel scale animation ────────────────────────────────────────────────────
   useEffect(() => {
