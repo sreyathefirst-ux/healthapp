@@ -43,6 +43,81 @@ export function OnboardingChat() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
+  // Streams a chat request and auto-advances to the next step when step_complete is detected.
+  // Called recursively on auto-advance; isLoading is managed by the caller (sendMessage).
+  async function runChat(messagesToSend: Message[], step: OnboardingStep): Promise<void> {
+    console.log('[OnboardingChat] runChat — step:', step, '| messages:', messagesToSend.length)
+
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: messagesToSend, step, collectedData: {} }),
+    })
+
+    console.log('[OnboardingChat] /api/chat response status:', response.status)
+
+    if (!response.body) throw new Error('No response body')
+
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder()
+    let assistantText = ''
+    let readCount = 0
+
+    setMessages((prev) => [...prev, { role: 'assistant', content: '' }])
+
+    while (true) {
+      const { done, value } = await reader.read()
+      readCount++
+      if (done) {
+        console.log('[OnboardingChat] stream done after', readCount, 'reads | text length:', assistantText.length)
+        break
+      }
+      const chunk = decoder.decode(value, { stream: true })
+      if (readCount <= 3) console.log(`[OnboardingChat] read #${readCount}:`, JSON.stringify(chunk.slice(0, 100)))
+      assistantText += chunk
+
+      setMessages((prev) => {
+        const updated = [...prev]
+        updated[updated.length - 1] = { role: 'assistant', content: assistantText }
+        return updated
+      })
+    }
+
+    const stepCompleteMatch = assistantText.match(/<step_complete>([\s\S]*?)<\/step_complete>/)
+    if (stepCompleteMatch) {
+      try {
+        const stepData = JSON.parse(stepCompleteMatch[1])
+        const nextStep = (stepData.step + 1) as OnboardingStep
+        console.log('[OnboardingChat] step_complete — advancing to step', nextStep)
+
+        const cleanText = assistantText.replace(/<step_complete>[\s\S]*?<\/step_complete>/g, '').trim()
+        setMessages((prev) => {
+          const updated = [...prev]
+          updated[updated.length - 1] = {
+            role: 'assistant',
+            content: cleanText || "Great! Let's move on.",
+          }
+          return updated
+        })
+        setCurrentStep(nextStep)
+
+        if (nextStep === 7) {
+          setTimeout(() => router.push('/onboarding/pet'), 1500)
+        } else if (nextStep <= 7) {
+          // Auto-advance: brief pause so the closing line renders, then fetch the next step's opener
+          await new Promise((resolve) => setTimeout(resolve, 400))
+          const msgsForNextStep: Message[] = [
+            ...messagesToSend,
+            { role: 'assistant', content: cleanText || "Great! Let's move on." },
+          ]
+          await runChat(msgsForNextStep, nextStep)
+        }
+      } catch (err) {
+        console.error('[OnboardingChat] failed to parse step_complete:', err)
+      }
+    }
+  }
+
   async function sendMessage() {
     if (!input.trim() || isLoading) return
 
@@ -52,72 +127,8 @@ export function OnboardingChat() {
     setInput('')
     setIsLoading(true)
 
-    console.log('[OnboardingChat] sendMessage — step:', currentStep, '| messages being sent:', updatedMessages.length)
-
     try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: updatedMessages,
-          step: currentStep,
-          collectedData: {},
-        }),
-      })
-
-      console.log('[OnboardingChat] /api/chat response status:', response.status, '| has body:', !!response.body)
-
-      if (!response.body) throw new Error('No response body')
-
-      const reader = response.body.getReader()
-      const decoder = new TextDecoder()
-      let assistantText = ''
-      let readCount = 0
-
-      setMessages((prev) => [...prev, { role: 'assistant', content: '' }])
-
-      while (true) {
-        const { done, value } = await reader.read()
-        readCount++
-        if (done) {
-          console.log('[OnboardingChat] stream done after', readCount, 'reads | final assistantText length:', assistantText.length)
-          console.log('[OnboardingChat] final assistantText (first 200):', assistantText.slice(0, 200))
-          break
-        }
-        const chunk = decoder.decode(value, { stream: true })
-        if (readCount <= 3) console.log(`[OnboardingChat] read #${readCount} chunk:`, JSON.stringify(chunk.slice(0, 100)))
-        assistantText += chunk
-
-        setMessages((prev) => {
-          const updated = [...prev]
-          updated[updated.length - 1] = { role: 'assistant', content: assistantText }
-          return updated
-        })
-      }
-
-      console.log('[OnboardingChat] messages state after stream:', messages.length + 2, 'total')
-
-      const stepCompleteMatch = assistantText.match(/<step_complete>([\s\S]*?)<\/step_complete>/)
-      if (stepCompleteMatch) {
-        try {
-          const stepData = JSON.parse(stepCompleteMatch[1])
-          const nextStep = (stepData.step + 1) as OnboardingStep
-          console.log('[OnboardingChat] step_complete detected — advancing to step', nextStep)
-
-          const cleanText = assistantText.replace(/<step_complete>[\s\S]*?<\/step_complete>/g, '').trim()
-          setMessages((prev) => {
-            const updated = [...prev]
-            updated[updated.length - 1] = { role: 'assistant', content: cleanText || "Great! Let's move to the next step." }
-            return updated
-          })
-
-          if (nextStep === 7) {
-            setTimeout(() => router.push('/onboarding/pet'), 1500)
-          } else if (nextStep <= 7) {
-            setCurrentStep(nextStep)
-          }
-        } catch {}
-      }
+      await runChat(updatedMessages, currentStep)
     } catch (error) {
       console.error('[OnboardingChat] fetch/stream error:', error)
       setMessages((prev) => [
