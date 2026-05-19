@@ -9,7 +9,7 @@ Return ONLY valid JSON matching this exact structure — no markdown, no explana
   "week_start_date": "YYYY-MM-DD",
   "days": {
     "monday": {
-      "breakfast": { "id": "uuid", "name": "...", "description": "...", "reasoning": "...", "calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0, "fiber_g": 0, "ingredients": ["2 cups ingredient", "..."], "image_url": null, "image_prompt": "A hand-drawn watercolor illustration of [meal name], fine liner pen with loose watercolor fill, Great British Baking Show recipe card style, warm rich colors, sketchbook paper texture" },
+      "breakfast": { "id": "uuid", "name": "...", "description": "...", "reasoning": "...", "calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0, "fiber_g": 0, "ingredients": ["2 cups ingredient", "..."], "image_url": null, "image_prompt": "A hand-drawn watercolor illustration of [meal name], fine liner pen with loose watercolor fill, warm rich colors on a sketchbook paper texture background. Food only, close-up, no text, no labels, no writing, no words." },
       "lunch": { "id": "uuid", "name": "...", "description": "...", "reasoning": "...", "calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0, "fiber_g": 0, "ingredients": ["..."], "image_url": null, "image_prompt": "..." },
       "dinner": { "id": "uuid", "name": "...", "description": "...", "reasoning": "...", "calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0, "fiber_g": 0, "ingredients": ["..."], "image_url": null, "image_prompt": "..." },
       "snack": { "id": "uuid", "name": "...", "description": "...", "reasoning": "...", "calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0, "fiber_g": 0, "ingredients": ["..."], "image_url": null, "image_prompt": "..." }

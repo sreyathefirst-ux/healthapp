@@ -1,6 +1,6 @@
 {
   "crons": [
-    { "path": "/api/cron/weekly-plans", "schedule": "0 8 * * 6" },
+    { "path": "/api/cron/weekly-plans", "schedule": "0 8 * * 0" },
     { "path": "/api/cron/pet-checkin", "schedule": "0 19 * * *" },
     { "path": "/api/cron/push-reminders", "schedule": "0 8 * * *" }
   ]

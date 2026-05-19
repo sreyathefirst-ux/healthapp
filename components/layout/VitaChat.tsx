@@ -25,7 +25,7 @@ const QUICK_REPLIES = [
   'I have a question about my plan',
 ]
 
-const CHECKIN_STEPS = { morning: 6, night: 7 }
+const CHECKIN_STEPS = { morning: 7, night: 7 }
 
 function todayISO() {
   return new Date().toISOString().split('T')[0]

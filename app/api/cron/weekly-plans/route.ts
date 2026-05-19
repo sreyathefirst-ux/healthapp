@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
 
         const tasks: Promise<void>[] = [
           generateAndSaveMealPlan(supabase, user.id, systemPrompt, weekStart),
-          generateAndSaveWorkoutPlan(supabase, user.id, systemPrompt, weekStart, profile.workout_preferences.days_per_week),
+          generateAndSaveWorkoutPlan(supabase, user.id, systemPrompt, weekStart, profile.workout_preferences?.days_per_week ?? 3),
         ]
 
         if (shouldGenerateComprehensive) {

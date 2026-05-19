@@ -244,6 +244,7 @@ Greet ${name} warmly by name. Mention one specific thing from their health profi
       'Any new symptoms or health concerns since yesterday?',
       "What's your mood like this morning?",
       dynamicQ,
+      "What's your weight this morning? (feel free to skip if you prefer not to track)",
     ]
 
     prompt += `

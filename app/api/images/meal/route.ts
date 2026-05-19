@@ -69,7 +69,7 @@ export async function POST(req: Request) {
     console.log('[images/meal] admin client created (service role, no cookie JWT)')
 
     const prompt = imagePrompt ||
-      `A hand-drawn watercolor illustration of ${mealName}, rendered in fine liner pen with loose watercolor fill, in the style of The Great British Baking Show recipe cards. Show a close-up view with warm, rich colors on a sketchbook paper texture background. Artistic and food-forward, no photography.`
+      `A hand-drawn watercolor illustration of ${mealName}, rendered in fine liner pen with loose watercolor fill. Close-up view with warm, rich colors on a sketchbook paper texture background. Food only, artistic, no photography, no text, no labels, no writing, no words.`
 
     console.log('[images/meal] image prompt (first 120 chars):', prompt.slice(0, 120))
     console.log('[images/meal] calling Gemini image model:', GEMINI_IMAGE_MODEL)
