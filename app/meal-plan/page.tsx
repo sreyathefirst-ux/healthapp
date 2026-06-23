@@ -10,7 +10,7 @@ import { CardSkeleton } from '@/components/ui/Skeleton'
 import { useToast } from '@/components/ui/Toast'
 import { createClient } from '@/lib/supabase/client'
 import { Meal, MealPlan, MealLogStatus, DayMeals } from '@/types'
-import { ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react'
+import { ChevronLeft, ChevronRight, RefreshCw, Utensils, AlertTriangle, CalendarDays, Sparkles } from 'lucide-react'
 
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
@@ -205,7 +205,7 @@ export default function MealPlanPage() {
         if (!normalized) {
           toast('Plan generated but structure was invalid. Please try again.', 'error')
         } else {
-          toast('Meal plan generated! 🥗', 'success')
+          toast('Meal plan generated!', 'success')
           // Clear image gen tracking so fresh images are generated for new plan
           imageGenTriggered.current = new Set()
           generateImagesForDay(normalized, selectedDay, getWeekStartDate(weekOffset))
@@ -276,7 +276,7 @@ export default function MealPlanPage() {
     }
 
     setSwapModal(null)
-    toast('Meal swapped! 🔄', 'success')
+    toast('Meal swapped!', 'success')
   }
 
   const weekStart = getWeekStartDate(weekOffset)
@@ -287,13 +287,13 @@ export default function MealPlanPage() {
     return (
       <AppShell>
         <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
-          <span className="text-7xl mb-6">🍽️</span>
+          <Utensils size={56} className="mb-6 text-green" />
           <h2 className="text-2xl font-bold text-text-primary mb-3">No meal plan yet</h2>
           <p className="text-text-secondary mb-8 max-w-sm">
             Vitalia will build a personalized 7-day meal plan based on your health profile, bloodwork, and food preferences.
           </p>
           <Button onClick={() => handleGenerate()} loading={generating} size="lg">
-            Generate my first plan ✨
+            <Sparkles size={17} /> Generate my first plan
           </Button>
         </div>
       </AppShell>
@@ -359,19 +359,19 @@ export default function MealPlanPage() {
           </div>
         ) : fetchError ? (
           <div className="text-center py-16">
-            <span className="text-5xl block mb-4">⚠️</span>
+            <AlertTriangle size={42} className="mx-auto mb-4 text-amber" />
             <h3 className="font-semibold text-text-primary mb-2">Failed to load meal plan</h3>
             <p className="text-text-secondary mb-6 text-sm">Check your connection and try again.</p>
             <Button variant="secondary" onClick={() => setWeekOffset((o) => o)}>Retry</Button>
           </div>
         ) : !plan && weekOffset !== 0 ? (
           <div className="text-center py-16">
-            <span className="text-5xl block mb-4">📅</span>
+            <CalendarDays size={42} className="mx-auto mb-4 text-vitalia-muted" />
             <p className="text-text-secondary">No meal plan for this week.</p>
           </div>
         ) : !dayMeals ? (
           <div className="text-center py-8">
-            <span className="text-4xl block mb-3">🍽️</span>
+            <Utensils size={34} className="mx-auto mb-3 text-vitalia-muted" />
             <p className="text-text-secondary text-sm mb-4">No meals for this day in your plan.</p>
             <Button variant="secondary" size="sm" onClick={() => handleGenerate()} loading={generating}>
               Regenerate plan

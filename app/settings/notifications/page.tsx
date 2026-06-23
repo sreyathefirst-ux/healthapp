@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/Toast'
+import { Bell, CheckCircle2 } from 'lucide-react'
 
 export default function NotificationsSettingsPage() {
   const { toast } = useToast()
@@ -53,7 +54,7 @@ export default function NotificationsSettingsPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ subscription: sub }),
         })
-        toast('Notifications enabled! 🔔', 'success')
+        toast('Notifications enabled!', 'success')
       } catch (err) {
         toast('Failed to set up notifications', 'error')
       }
@@ -91,12 +92,12 @@ export default function NotificationsSettingsPage() {
             Get reminders for your routines, meals, and workouts throughout the day.
           </p>
           {pushEnabled ? (
-            <div className="flex items-center gap-2 text-green-600 text-sm font-medium">
-              <span>✅</span> Push notifications are enabled
+            <div className="flex items-center gap-2 text-green-deep text-sm font-medium">
+              <CheckCircle2 size={16} /> Push notifications are enabled
             </div>
           ) : (
             <Button onClick={enablePush} variant="primary">
-              🔔 Enable Notifications
+              <Bell size={16} /> Enable Notifications
             </Button>
           )}
           {notifPermission === 'denied' && (

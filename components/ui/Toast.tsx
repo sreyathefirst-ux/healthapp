@@ -1,7 +1,7 @@
 'use client'
 
 import { createContext, useContext, useState, useCallback, ReactNode } from 'react'
-import { X } from 'lucide-react'
+import { X, CheckCircle2, XCircle, Info } from 'lucide-react'
 
 type ToastVariant = 'success' | 'error' | 'info'
 
@@ -23,10 +23,10 @@ const variantStyles: Record<ToastVariant, string> = {
   info: 'bg-lavender/10 text-text-primary border-lavender/30',
 }
 
-const variantIcons: Record<ToastVariant, string> = {
-  success: '✅',
-  error: '❌',
-  info: 'ℹ️',
+const variantIcons: Record<ToastVariant, ReactNode> = {
+  success: <CheckCircle2 size={17} className="text-green" />,
+  error: <XCircle size={17} className="text-red-500" />,
+  info: <Info size={17} className="text-lavender" />,
 }
 
 export function ToastProvider({ children }: { children: ReactNode }) {
@@ -49,7 +49,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             key={t.id}
             className={`flex items-start gap-3 px-4 py-3 rounded-xl border shadow-card text-sm font-medium animate-fade-in ${variantStyles[t.variant]}`}
           >
-            <span>{variantIcons[t.variant]}</span>
+            <span className="flex-shrink-0 mt-0.5">{variantIcons[t.variant]}</span>
             <span className="flex-1">{t.message}</span>
             <button
               onClick={() => setToasts((prev) => prev.filter((x) => x.id !== t.id))}

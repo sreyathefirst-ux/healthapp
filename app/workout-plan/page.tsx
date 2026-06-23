@@ -9,7 +9,7 @@ import { CardSkeleton } from '@/components/ui/Skeleton'
 import { useToast } from '@/components/ui/Toast'
 import { createClient } from '@/lib/supabase/client'
 import { WorkoutDay, WorkoutPlan, WorkoutLogStatus } from '@/types'
-import { ChevronLeft, ChevronRight, RefreshCw, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, RefreshCw, X, Dumbbell, Leaf, AlertTriangle, CalendarDays, Sparkles } from 'lucide-react'
 
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
@@ -91,7 +91,7 @@ export default function WorkoutPlanPage() {
       const data = await res.json()
       if (data.success) {
         setPlan(data.plan)
-        toast('Workout plan generated! 💪', 'success')
+        toast('Workout plan generated!', 'success')
       } else {
         toast(data.error || 'Failed to generate plan', 'error')
       }
@@ -159,7 +159,7 @@ export default function WorkoutPlanPage() {
 
     setSwapModal(null)
     setSwapAlternatives([])
-    toast('Workout swapped! 🔄', 'success')
+    toast('Workout swapped!', 'success')
   }
 
   async function handleUpdateDay(day: string, updated: WorkoutDay) {
@@ -190,13 +190,13 @@ export default function WorkoutPlanPage() {
     return (
       <AppShell>
         <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
-          <span className="text-7xl mb-6">💪</span>
+          <Dumbbell size={56} className="mb-6 text-green" />
           <h2 className="text-2xl font-bold text-text-primary mb-3">No workout plan yet</h2>
           <p className="text-text-secondary mb-8 max-w-sm">
             Vitalia will build a personalized 7-day workout plan based on your fitness goals, equipment, and health profile.
           </p>
           <Button onClick={() => handleGenerate()} loading={generating} size="lg">
-            Generate my first plan ✨
+            <Sparkles size={17} /> Generate my first plan
           </Button>
         </div>
       </AppShell>
@@ -247,7 +247,7 @@ export default function WorkoutPlanPage() {
                   }`}
                 >
                   {DAY_LABELS[i]}
-                  {isRest && <span className="text-xs block">🧘</span>}
+                  {isRest && <Leaf size={11} className="block mx-auto mt-0.5 opacity-70" />}
                   {isLogged && !isRest && <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full" />}
                 </button>
               )
@@ -259,14 +259,14 @@ export default function WorkoutPlanPage() {
           <CardSkeleton />
         ) : fetchError ? (
           <div className="text-center py-16">
-            <span className="text-5xl block mb-4">⚠️</span>
+            <AlertTriangle size={42} className="mx-auto mb-4 text-amber" />
             <h3 className="font-semibold text-text-primary mb-2">Failed to load workout plan</h3>
             <p className="text-text-secondary mb-6 text-sm">Check your connection and try again.</p>
             <Button variant="secondary" onClick={() => setWeekOffset((o) => o)}>Retry</Button>
           </div>
         ) : !plan && weekOffset !== 0 ? (
           <div className="text-center py-16">
-            <span className="text-5xl block mb-4">📅</span>
+            <CalendarDays size={42} className="mx-auto mb-4 text-vitalia-muted" />
             <p className="text-text-secondary">No workout plan for this week.</p>
           </div>
         ) : !dayWorkout ? (

@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import Image from 'next/image'
 
 export default function SignupPage() {
   const router = useRouter()
@@ -34,14 +33,20 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white flex flex-col items-center justify-center px-8">
-      <div className="w-full max-w-[340px]">
-        <div className="text-center mb-10">
-          <div className="flex justify-center mb-4">
-            <Image src="/leaf-logo.svg" alt="Vitalia" width={48} height={62} />
-          </div>
-          <h1 className="font-black text-2xl tracking-[2px] uppercase text-text-primary">VITALIA</h1>
-          <p className="text-text-secondary mt-2 text-sm">Start your personalized health journey</p>
+    <div
+      className="min-h-screen flex flex-col items-center justify-center px-8"
+      style={{ background: 'linear-gradient(180deg, #DEFAEE 0%, #E2F0FC 38%, #EBE5FD 72%, #F1F5F9 100%)' }}
+    >
+      <div className="w-full max-w-[360px] bg-white rounded-[26px] border border-vitalia-border shadow-card-lg p-9">
+        <div className="text-center mb-8">
+          <div
+            className="w-14 h-14 rounded-[18px] mx-auto mb-5"
+            style={{ background: 'linear-gradient(135deg, #0FCB8C 0%, #2BAEE6 50%, #9B53E6 100%)' }}
+          />
+          <h1 className="font-display font-semibold text-[27px] tracking-[-0.01em] text-text-primary mb-1">
+            Create your account
+          </h1>
+          <p className="text-text-secondary text-sm">Start your personalized health journey.</p>
         </div>
 
         <form onSubmit={handleSignup} className="space-y-[22px]">
@@ -76,15 +81,15 @@ export default function SignupPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 text-white text-[13px] font-bold uppercase tracking-[0.6px] btn-vitalia disabled:opacity-60 disabled:cursor-not-allowed"
+            className="w-full py-3.5 text-white text-[15px] font-bold tracking-[0.2px] btn-vitalia disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {loading ? 'Creating account…' : 'Create Account'}
+            {loading ? 'Creating account…' : 'Create account'}
           </button>
         </form>
 
-        <p className="text-center text-[11px] mt-6 text-vitalia-muted">
+        <p className="text-center text-[13.5px] mt-6 text-vitalia-muted">
           Already have an account?{' '}
-          <Link href="/login" className="font-bold hover:underline text-teal">
+          <Link href="/login" className="font-bold hover:underline text-green-deep">
             Sign in
           </Link>
         </p>

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/Toast'
 import { Skeleton } from '@/components/ui/Skeleton'
-import { RefreshCw, ChevronDown } from 'lucide-react'
+import { RefreshCw, ChevronDown, ClipboardList } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 
 interface PastReport {
@@ -53,7 +53,7 @@ export default function HealthReportPage() {
       const data = await res.json()
       if (data.success) {
         setReport(data.report)
-        toast('Health report updated! 📋', 'success')
+        toast('Health report updated!', 'success')
       } else {
         toast('Failed to generate report', 'error')
       }
@@ -107,7 +107,7 @@ export default function HealthReportPage() {
           </Card>
         ) : !report ? (
           <div className="text-center py-16">
-            <span className="text-5xl block mb-4">📋</span>
+            <ClipboardList size={42} className="mx-auto mb-4 text-green" />
             <h3 className="font-semibold text-text-primary mb-2">No health report yet</h3>
             <p className="text-text-secondary mb-6">Generate your personalized health insights</p>
             <Button onClick={handleRegenerate} loading={regenerating}>Generate Report</Button>

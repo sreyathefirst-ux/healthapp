@@ -5,7 +5,8 @@ import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { ExerciseItem } from './ExerciseItem'
 import { WorkoutDay, WorkoutLogStatus, Exercise } from '@/types'
-import { RefreshCw, Plus, Check, X, ChevronDown } from 'lucide-react'
+import { RefreshCw, Plus, Check, X, ChevronDown, Dumbbell, Home, Users, Leaf, BedDouble, Clock, Zap } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 
 interface WorkoutDayCardProps {
   workout: WorkoutDay
@@ -16,7 +17,11 @@ interface WorkoutDayCardProps {
   onUpdate?: (day: string, updated: WorkoutDay) => void
 }
 
-const locationEmoji: Record<string, string> = { gym: '🏋️', home: '🏠', class: '🧘' }
+const locationIcon: Record<string, LucideIcon> = { gym: Dumbbell, home: Home, class: Users }
+function LocationIcon({ loc, size = 13 }: { loc: string; size?: number }) {
+  const Ic = locationIcon[loc] || Dumbbell
+  return <Ic size={size} className="inline -mt-0.5" />
+}
 const LOCATION_OPTIONS: NonNullable<WorkoutDay['location']>[] = ['gym', 'home', 'class']
 
 function generateId() {
@@ -68,17 +73,17 @@ export function WorkoutDayCard({ workout, day, logStatus, onSwap, onLog, onUpdat
     setShowTypeMenu(false)
   }
 
-  const logButtons: { status: WorkoutLogStatus; label: string; title: string }[] = [
-    { status: 'completed', label: '✅', title: 'Completed' },
-    { status: 'modified', label: '⚡', title: 'Modified' },
-    { status: 'skipped', label: '❌', title: 'Skipped' },
+  const logButtons: { status: WorkoutLogStatus; Icon: LucideIcon; title: string; activeColor: string }[] = [
+    { status: 'completed', Icon: Check, title: 'Completed', activeColor: '#07C281' },
+    { status: 'modified', Icon: Zap, title: 'Modified', activeColor: '#FF9A2E' },
+    { status: 'skipped', Icon: X, title: 'Skipped', activeColor: '#FF4D8D' },
   ]
 
   if (workout.type === 'rest') {
     return (
       <div className="bg-white rounded-card shadow-card overflow-hidden">
         <div className="p-6 text-center">
-          <div className="text-5xl mb-3">🧘</div>
+          <Leaf size={40} className="mx-auto mb-3 text-green" />
           <h3 className="font-bold text-text-primary text-lg mb-2">Rest Day</h3>
           {workout.recovery_note && (
             <p className="text-text-secondary text-sm leading-relaxed">{workout.recovery_note}</p>
@@ -117,9 +122,9 @@ export function WorkoutDayCard({ workout, day, logStatus, onSwap, onLog, onUpdat
                   <div className="absolute right-0 top-full mt-1 bg-white rounded-xl shadow-card border border-vitalia-border z-20 min-w-[160px]">
                     <button
                       onClick={() => handleChangeType('rest')}
-                      className="block w-full text-left px-3 py-2 text-sm hover:bg-bg transition-colors rounded-t-xl text-text-primary"
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-bg transition-colors rounded-t-xl text-text-primary flex items-center gap-2"
                     >
-                      🛌 Make rest day
+                      <BedDouble size={14} /> Make rest day
                     </button>
                     <div className="border-t border-vitalia-border px-3 py-2">
                       <p className="text-xs text-text-secondary font-medium mb-1.5">Location</p>
@@ -128,9 +133,9 @@ export function WorkoutDayCard({ workout, day, logStatus, onSwap, onLog, onUpdat
                           <button
                             key={loc}
                             onClick={() => handleChangeLocation(loc)}
-                            className={`text-xs px-2 py-1.5 rounded-lg transition-colors text-left ${workout.location === loc ? 'bg-accent-primary/20 text-text-primary font-medium' : 'hover:bg-bg text-text-secondary'}`}
+                            className={`text-xs px-2 py-1.5 rounded-lg transition-colors text-left flex items-center gap-1.5 ${workout.location === loc ? 'bg-accent-primary/20 text-text-primary font-medium' : 'hover:bg-bg text-text-secondary'}`}
                           >
-                            {locationEmoji[loc]} {loc.charAt(0).toUpperCase() + loc.slice(1)}
+                            <LocationIcon loc={loc} /> {loc.charAt(0).toUpperCase() + loc.slice(1)}
                           </button>
                         ))}
                       </div>
@@ -143,10 +148,10 @@ export function WorkoutDayCard({ workout, day, logStatus, onSwap, onLog, onUpdat
         </div>
         <div className="flex gap-2 flex-wrap">
           {workout.location && (
-            <Badge color="primary">{locationEmoji[workout.location]} {workout.location}</Badge>
+            <Badge color="primary"><span className="inline-flex items-center gap-1 capitalize"><LocationIcon loc={workout.location} size={12} /> {workout.location}</span></Badge>
           )}
           {workout.duration_mins && (
-            <Badge color="sage">⏱️ {workout.duration_mins} min</Badge>
+            <Badge color="sage"><span className="inline-flex items-center gap-1"><Clock size={12} /> {workout.duration_mins} min</span></Badge>
           )}
         </div>
       </div>
@@ -204,14 +209,15 @@ export function WorkoutDayCard({ workout, day, logStatus, onSwap, onLog, onUpdat
 
       <div className="p-5 border-t border-vitalia-border flex items-center justify-between">
         <div className="flex gap-1">
-          {logButtons.map(({ status, label, title }) => (
+          {logButtons.map(({ status, Icon, title, activeColor }) => (
             <button
               key={status}
               onClick={() => onLog(day, logStatus === status ? null : status)}
-              className={`w-10 h-10 rounded-xl text-lg transition-all ${logStatus === status ? 'bg-accent-primary/20 ring-2 ring-accent-primary' : 'hover:bg-bg'}`}
+              className="w-10 h-10 rounded-xl transition-all flex items-center justify-center hover:bg-bg"
+              style={logStatus === status ? { background: activeColor + '22', boxShadow: `inset 0 0 0 2px ${activeColor}` } : undefined}
               title={title}
             >
-              {label}
+              <Icon size={18} style={{ color: logStatus === status ? activeColor : '#969C95' }} />
             </button>
           ))}
         </div>

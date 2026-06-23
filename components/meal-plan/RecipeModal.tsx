@@ -5,7 +5,8 @@ import { motion } from 'framer-motion'
 import Image from 'next/image'
 import { Badge } from '@/components/ui/Badge'
 import { Meal } from '@/types'
-import { X, Clock, Users, ChefHat } from 'lucide-react'
+import { X, Clock, Users, ChefHat, Coffee, Salad, Utensils, Apple, Flame } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 
 interface RecipeData {
   prep_time_mins: number
@@ -49,10 +50,8 @@ export function RecipeModal({ meal, mealType, onClose }: RecipeModalProps) {
       .finally(() => setLoading(false))
   }, [meal.name, meal.ingredients, meal.description])
 
-  const mealEmoji =
-    mealType === 'breakfast' ? '🍳' :
-    mealType === 'lunch' ? '🥗' :
-    mealType === 'dinner' ? '🍽️' : '🍎'
+  const mealIconMap: Record<string, LucideIcon> = { breakfast: Coffee, lunch: Salad, dinner: Utensils }
+  const MealIcon = mealIconMap[mealType] || Apple
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
@@ -74,7 +73,7 @@ export function RecipeModal({ meal, mealType, onClose }: RecipeModalProps) {
               onError={() => setImageError(true)}
             />
           ) : (
-            <div className="flex items-center justify-center h-full text-6xl">{mealEmoji}</div>
+            <div className="flex items-center justify-center h-full"><MealIcon size={56} className="text-green/60" /></div>
           )}
           <button
             onClick={onClose}
@@ -83,8 +82,8 @@ export function RecipeModal({ meal, mealType, onClose }: RecipeModalProps) {
             <X size={16} className="text-text-primary" />
           </button>
           <div className="absolute bottom-3 left-3">
-            <span className="bg-white/90 text-text-primary text-xs font-semibold px-3 py-1 rounded-full capitalize">
-              {mealEmoji} {mealType}
+            <span className="bg-white/90 text-text-primary text-xs font-semibold px-3 py-1 rounded-full capitalize inline-flex items-center gap-1.5">
+              <MealIcon size={13} /> {mealType}
             </span>
           </div>
         </div>
@@ -98,7 +97,7 @@ export function RecipeModal({ meal, mealType, onClose }: RecipeModalProps) {
 
           {/* Macros */}
           <div className="flex flex-wrap gap-2">
-            <Badge color="coral">🔥 {meal.calories} cal</Badge>
+            <Badge color="coral"><span className="inline-flex items-center gap-1"><Flame size={11} /> {meal.calories} cal</span></Badge>
             <Badge color="primary">Protein {meal.protein_g}g</Badge>
             <Badge color="sage">Carbs {meal.carbs_g}g</Badge>
             <Badge color="yellow">Fat {meal.fat_g}g</Badge>

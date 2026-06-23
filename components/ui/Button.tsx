@@ -11,8 +11,8 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantStyles: Record<Variant, string> = {
-  primary: 'btn-vitalia text-white font-bold rounded-btn uppercase tracking-wide',
-  secondary: 'border-2 border-lavender bg-transparent text-lavender font-semibold rounded-btn hover:bg-lavender/8 transition-all duration-200',
+  primary: 'btn-vitalia text-white font-semibold rounded-btn',
+  secondary: 'btn-outline rounded-btn',
   ghost: 'bg-transparent border border-vitalia-border text-text-secondary font-medium rounded-btn hover:bg-bg-2 transition-all duration-200',
 }
 

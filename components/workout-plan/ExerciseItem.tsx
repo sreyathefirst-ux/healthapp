@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { Dumbbell, ArrowRight } from 'lucide-react'
 import { Exercise } from '@/types'
 
 interface ExerciseItemProps {
@@ -58,16 +59,16 @@ export function ExerciseItem({ exercise }: ExerciseItemProps) {
               onError={() => setGifError(true)}
             />
           ) : (
-            <span className="text-2xl">💪</span>
+            <Dumbbell size={22} className="text-vitalia-muted" />
           )}
         </div>
       </div>
 
       <button
         onClick={() => setExpanded(!expanded)}
-        className="text-xs text-accent-primary font-medium hover:underline"
+        className="text-xs text-green-deep font-medium hover:underline inline-flex items-center gap-1"
       >
-        {expanded ? 'Hide explanation' : 'Why this? →'}
+        {expanded ? 'Hide explanation' : <>Why this? <ArrowRight size={12} /></>}
       </button>
 
       {expanded && (

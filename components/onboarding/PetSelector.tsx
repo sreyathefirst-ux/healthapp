@@ -6,14 +6,15 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
 import { PetType } from '@/types'
-import { Check, X, Loader2, RefreshCw } from 'lucide-react'
+import { Check, X, Loader2, RefreshCw, Cat, Dog, Flame, Rabbit, PawPrint, Stethoscope, Salad, Dumbbell, Sun, Moon } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 
-const pets: { type: PetType; emoji: string; name: string; description: string }[] = [
-  { type: 'cat', emoji: '🐱', name: 'Cat', description: 'Elegant and independent, but deeply loyal' },
-  { type: 'dog', emoji: '🐶', name: 'Dog', description: 'Enthusiastic and supportive every single day' },
-  { type: 'dragon', emoji: '🐉', name: 'Dragon', description: 'Fierce, powerful, and legendary' },
-  { type: 'bunny', emoji: '🐰', name: 'Bunny', description: 'Gentle, hopeful, and endlessly encouraging' },
-  { type: 'fox', emoji: '🦊', name: 'Fox', description: 'Clever, quick, and full of surprises' },
+const pets: { type: PetType; Icon: LucideIcon; name: string; description: string }[] = [
+  { type: 'cat', Icon: Cat, name: 'Cat', description: 'Elegant and independent, but deeply loyal' },
+  { type: 'dog', Icon: Dog, name: 'Dog', description: 'Enthusiastic and supportive every single day' },
+  { type: 'dragon', Icon: Flame, name: 'Dragon', description: 'Fierce, powerful, and legendary' },
+  { type: 'bunny', Icon: Rabbit, name: 'Bunny', description: 'Gentle, hopeful, and endlessly encouraging' },
+  { type: 'fox', Icon: PawPrint, name: 'Fox', description: 'Clever, quick, and full of surprises' },
 ]
 
 const LOADING_MESSAGES = [
@@ -33,17 +34,17 @@ type TaskStatus = 'pending' | 'running' | 'done' | 'error'
 interface Task {
   key: string
   label: string
-  emoji: string
+  Icon: LucideIcon
   endpoint: string
   status: TaskStatus
 }
 
 const TASK_DEFINITIONS: Omit<Task, 'status'>[] = [
-  { key: 'report',  label: 'Health Report',    emoji: '🩺', endpoint: '/api/plans/report'  },
-  { key: 'meal',    label: 'Meal Plan',         emoji: '🥗', endpoint: '/api/plans/meal'    },
-  { key: 'workout', label: 'Workout Plan',      emoji: '💪', endpoint: '/api/plans/workout' },
-  { key: 'morning', label: 'Morning Routine',   emoji: '🌅', endpoint: '/api/plans/routine' },
-  { key: 'night',   label: 'Night Routine',     emoji: '🌙', endpoint: ''                   },
+  { key: 'report',  label: 'Health Report',    Icon: Stethoscope, endpoint: '/api/plans/report'  },
+  { key: 'meal',    label: 'Meal Plan',         Icon: Salad,       endpoint: '/api/plans/meal'    },
+  { key: 'workout', label: 'Workout Plan',      Icon: Dumbbell,    endpoint: '/api/plans/workout' },
+  { key: 'morning', label: 'Morning Routine',   Icon: Sun,         endpoint: '/api/plans/routine' },
+  { key: 'night',   label: 'Night Routine',     Icon: Moon,        endpoint: ''                   },
 ]
 
 function makeTasks(): Task[] {
@@ -205,7 +206,7 @@ export function PetSelector() {
     })
   }
 
-  const petEmoji = pets.find((p) => p.type === selectedPet)?.emoji ?? '🌿'
+  const PetIcon = pets.find((p) => p.type === selectedPet)?.Icon ?? PawPrint
   const doneCount = tasks.filter((t) => t.status === 'done').length
 
   if (generating) {
@@ -228,9 +229,10 @@ export function PetSelector() {
                   ? { duration: 1.5, repeat: Infinity }
                   : { duration: 1.8, repeat: Infinity, ease: 'easeInOut' }
               }
-              className="text-8xl select-none"
+              className="select-none w-24 h-24 rounded-3xl flex items-center justify-center"
+              style={{ background: 'var(--gradient-brand)' }}
             >
-              {petEmoji}
+              <PetIcon size={52} className="text-white" />
             </motion.div>
           </div>
 
@@ -238,7 +240,7 @@ export function PetSelector() {
             <AnimatePresence mode="wait">
               {allDone ? (
                 <motion.div key="done" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-1">
-                  <h2 className="text-2xl font-bold text-text-primary">Your plan is ready! 🎉</h2>
+                  <h2 className="text-2xl font-bold text-text-primary">Your plan is ready!</h2>
                   <p className="text-text-secondary text-sm">Taking you to your results...</p>
                 </motion.div>
               ) : hasErrors ? (
@@ -292,7 +294,7 @@ export function PetSelector() {
                 }`}
                 style={task.status === 'running' ? { backgroundColor: 'rgba(93,218,184,0.08)' } : undefined}
               >
-                <span className="text-xl w-8 text-center flex-shrink-0">{task.emoji}</span>
+                <span className="w-8 flex items-center justify-center flex-shrink-0"><task.Icon size={18} className="text-green-deep" /></span>
                 <span className={`flex-1 text-sm font-medium ${
                   task.status === 'done' ? 'text-accent-primary' :
                   task.status === 'error' ? 'text-red-600' :
@@ -355,7 +357,7 @@ export function PetSelector() {
                   : 'bg-white border-vitalia-border shadow-card hover:border-accent-primary/40'
               }`}
             >
-              <div className="text-5xl mb-3">{pet.emoji}</div>
+              <pet.Icon size={40} className="mb-3 text-green-deep" />
               <h3 className="font-bold text-text-primary text-lg">{pet.name}</h3>
               <p className="text-text-secondary text-sm mt-1">{pet.description}</p>
             </motion.button>
@@ -370,7 +372,7 @@ export function PetSelector() {
           >
             <div>
               <label className="block text-[11px] font-bold uppercase tracking-[0.5px] mb-2 text-text-body">
-                What will you name your {pets.find((p) => p.type === selectedPet)?.emoji}?
+                What will you name your {pets.find((p) => p.type === selectedPet)?.name.toLowerCase()}?
               </label>
               <input
                 type="text"
@@ -388,7 +390,7 @@ export function PetSelector() {
               loading={loading}
               className="w-full"
             >
-              Meet {petName || 'your pet'}! 🎉
+              Meet {petName || 'your pet'}
             </Button>
           </motion.div>
         )}

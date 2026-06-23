@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/Card'
 import { ProgressBar } from '@/components/ui/ProgressBar'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { useRoutine } from '@/hooks/useRoutine'
-import { Pencil, Trash2, Check, X, Plus } from 'lucide-react'
+import { Pencil, Trash2, Check, X, Plus, Sun, Moon, PartyPopper, ArrowRight, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 
 interface RoutineChecklistProps {
@@ -24,10 +24,11 @@ export function RoutineChecklist({ type }: RoutineChecklistProps) {
   const isComplete = completion === 100 && items.length > 0
 
   const isMorning = type === 'morning'
-  const emoji = isMorning ? '☀️' : '🌙'
+  const RoutineIcon = isMorning ? Sun : Moon
+  const iconColor = isMorning ? '#F7C948' : '#5B6CFF'
   const title = isMorning ? 'Morning Routine' : 'Night Routine'
   const otherHref = isMorning ? '/routine/night' : '/routine/morning'
-  const otherLabel = isMorning ? 'Night Routine →' : '← Morning Routine'
+  const otherLabel = isMorning ? 'Night Routine' : 'Morning Routine'
 
   function startEdit(id: string, label: string, time_target?: string) {
     setEditingId(id)
@@ -69,11 +70,11 @@ export function RoutineChecklist({ type }: RoutineChecklistProps) {
     return (
       <Card>
         <div className="text-center py-8">
-          <span className="text-4xl block mb-3">{emoji}</span>
+          <RoutineIcon size={36} className="mx-auto mb-3" style={{ color: iconColor }} />
           <h3 className="font-semibold text-text-primary mb-2">No routine items yet</h3>
           <p className="text-text-secondary text-sm mb-4">Set up your routine in Settings</p>
-          <Link href="/settings/routine" className="text-accent-primary text-sm font-medium hover:underline">
-            Set up routine →
+          <Link href="/settings/routine" className="text-green-deep text-sm font-medium hover:underline inline-flex items-center gap-1">
+            Set up routine <ArrowRight size={13} />
           </Link>
         </div>
       </Card>
@@ -85,7 +86,7 @@ export function RoutineChecklist({ type }: RoutineChecklistProps) {
       <Card>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <span className="text-2xl">{emoji}</span>
+            <RoutineIcon size={22} style={{ color: iconColor }} />
             <h2 className="font-bold text-text-primary">{title}</h2>
           </div>
           <span className="text-sm font-medium text-text-secondary">
@@ -224,18 +225,20 @@ export function RoutineChecklist({ type }: RoutineChecklistProps) {
             exit={{ opacity: 0, scale: 0.8 }}
             className="bg-teal/10 border border-teal/20 rounded-card p-6 text-center"
           >
-            <div className="text-5xl mb-2">🎉</div>
-            <h3 className="font-bold text-accent-primary text-lg">
+            <PartyPopper size={40} className="mx-auto mb-2 text-green" />
+            <h3 className="font-bold text-green-deep text-lg">
               {isMorning ? 'Morning complete!' : 'Night routine done!'}
             </h3>
-            <p className="text-text-secondary text-sm mt-1">Amazing work! Your streak is growing 🔥</p>
+            <p className="text-text-secondary text-sm mt-1">Amazing work — your streak is growing.</p>
           </motion.div>
         )}
       </AnimatePresence>
 
       <Link href={otherHref} className="block">
-        <div className="bg-white rounded-card shadow-card border border-accent-primary/15 p-4 text-center text-accent-primary text-sm font-medium hover:bg-accent-primary/5 transition-colors">
+        <div className="bg-white rounded-card shadow-card border border-vitalia-border p-4 text-center text-green-deep text-sm font-medium hover:bg-bg-2 transition-colors inline-flex items-center justify-center gap-1.5 w-full">
+          {!isMorning && <ArrowLeft size={14} />}
           {otherLabel}
+          {isMorning && <ArrowRight size={14} />}
         </div>
       </Link>
     </div>

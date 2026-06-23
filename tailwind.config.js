@@ -8,49 +8,67 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Backgrounds
-        bg: '#FFFFFF',
-        'bg-2': '#F8F9FA',
-        'bg-3': '#F3F4F6',
+        // Surfaces — warm paper
+        bg: '#F1F5F9',
+        'bg-2': '#EDF2F8',
+        'bg-3': '#E8EDF4',
         card: '#FFFFFF',
-        // Brand colors
-        teal: '#5DDAB8',
-        lavender: '#B48FE8',
-        // Token aliases (keep same names so existing classes auto-update)
-        'accent-primary': '#5DDAB8',   // teal
-        'accent-coral': '#B48FE8',     // lavender
-        'accent-sage': '#6FD8A0',      // gradient start
-        'accent-yellow': '#F8F9FA',    // secondary bg
-        // Text
-        'text-primary': '#1A1A2E',
-        'text-body': '#4A4A5A',
-        'text-secondary': '#6B6B8A',
+
+        // Brand — Vitalia gradient hues (green → blue → violet)
+        green: '#07C281',
+        'green-deep': '#04976A',
+        teal: '#06BBC4',
+        blue: '#2BAEE6',
+        violet: '#9B53E6',
+        lavender: '#8257FF',
+        amber: '#FF9A2E',
+        rose: '#FF4D8D',
+
+        // Token aliases — backward compat with existing class names
+        'accent-primary': '#07C281',
+        'accent-coral': '#8257FF',
+        'accent-sage': '#1FD7A4',
+        'accent-yellow': '#EDF2F8',
+
+        // Text — warm charcoal-green family
+        'text-primary': '#16201B',
+        'text-body': '#454D44',
+        'text-secondary': '#6C736C',
+
         // Design system tokens
-        'vitalia-border': '#EBEBF0',
-        'vitalia-muted': '#9B9BAA',
-        'vitalia-dim': '#9B9BAA',
-        'vitalia-sage': '#6FD8A0',
-        'vitalia-lavender': '#B48FE8',
-        'vitalia-cream': '#F8F9FA',
+        'vitalia-border': '#E2E8F0',
+        'vitalia-muted': '#969C95',
+        'vitalia-dim': '#969C95',
+        'vitalia-sage': '#1FD7A4',
+        'vitalia-lavender': '#8257FF',
+        'vitalia-cream': '#F6FCF9',
+        'vitalia-fill': '#EDF2F8',
+        'vitalia-line': '#E2E8F0',
+        'vitalia-faint': '#B0B5AE',
       },
       borderRadius: {
         sm: '10px',
         md: '14px',
-        card: '20px',
+        card: '22px',
         lg: '24px',
-        btn: '999px',   // pill CTAs
+        btn: '13px',
         pill: '999px',
       },
       boxShadow: {
-        card: '0px 2px 8px rgba(0,0,0,0.06)',
-        'card-hover': '0px 4px 16px rgba(0,0,0,0.08)',
-        'card-lg': '0px 8px 32px rgba(0,0,0,0.10)',
+        sm: '0 1px 2px rgba(36,40,30,.04), 0 4px 12px rgba(36,40,30,.04)',
+        card: '0 1px 2px rgba(36,40,30,.04), 0 12px 30px rgba(36,40,30,.06)',
+        'card-hover': '0 1px 2px rgba(36,40,30,.05), 0 20px 40px rgba(36,40,30,.10)',
+        'card-lg': '0 24px 60px rgba(36,40,30,.14)',
       },
       fontFamily: {
-        sans: ['DM Sans', 'sans-serif'],
+        sans: ['DM Sans', '-apple-system', 'system-ui', 'sans-serif'],
+        display: ['Bricolage Grotesque', '-apple-system', 'system-ui', 'sans-serif'],
       },
       backgroundImage: {
-        'vitalia-gradient': 'linear-gradient(135deg, #6FD8A0 0%, #5DDAB8 50%, #B48FE8 100%)',
+        'vitalia-gradient': 'linear-gradient(135deg, #0FCB8C 0%, #2BAEE6 50%, #9B53E6 100%)',
+        'vitalia-gradient-warm': 'linear-gradient(135deg, #10D898 0%, #0FC7C2 100%)',
+        'vitalia-gradient-header': 'linear-gradient(180deg, #DEFAEE 0%, #E2F0FC 38%, #EBE5FD 72%, #F1F5F9 100%)',
+        'vitalia-gradient-home': 'linear-gradient(150deg, #D2F6E7 0%, #D6EAFB 48%, #E9DCFD 100%)',
       },
     },
   },

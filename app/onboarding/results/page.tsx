@@ -6,7 +6,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import ReactMarkdown from 'react-markdown'
 import { createClient } from '@/lib/supabase/client'
 import { MealPlan, WorkoutPlan, RoutineItem } from '@/types'
-import { ChevronRight, ChevronLeft, ArrowRight } from 'lucide-react'
+import { ChevronRight, ChevronLeft, ArrowRight, Stethoscope, Salad, Dumbbell, Sun, Moon, Sprout, Coffee, Utensils, Apple, Leaf, Sparkles, ClipboardList } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const
 const DAY_LABELS: Record<string, string> = {
@@ -96,17 +97,17 @@ export default function OnboardingResultsPage() {
     setSlide(next)
   }
 
-  const slides = [
-    { label: 'Your Health Report', icon: '🩺' },
-    { label: 'Meal Plan', icon: '🥗' },
-    { label: 'Workout Plan', icon: '💪' },
-    { label: 'Daily Routine', icon: '🌅' },
+  const slides: { label: string; Icon: LucideIcon }[] = [
+    { label: 'Your Health Report', Icon: Stethoscope },
+    { label: 'Meal Plan', Icon: Salad },
+    { label: 'Workout Plan', Icon: Dumbbell },
+    { label: 'Daily Routine', Icon: Sun },
   ]
 
   if (loading) {
     return (
       <div className="min-h-screen bg-bg flex flex-col items-center justify-center gap-4">
-        <div className="text-5xl animate-pulse">🌿</div>
+        <Sprout size={44} className="animate-pulse text-green" />
         <p className="text-text-secondary text-sm">Loading your personalized plan...</p>
       </div>
     )
@@ -121,7 +122,9 @@ export default function OnboardingResultsPage() {
         <div className="max-w-2xl mx-auto">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <span className="text-xl">🌿</span>
+              <span className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'var(--gradient-brand)' }}>
+                <Sprout size={15} className="text-white" />
+              </span>
               <span className="font-semibold text-text-primary">Vitalia</span>
             </div>
             <span className="text-sm text-text-secondary">{slide + 1} of {slides.length}</span>
@@ -138,8 +141,8 @@ export default function OnboardingResultsPage() {
               />
             ))}
           </div>
-          <p className="text-center text-xs font-medium text-accent-primary mt-2">
-            {slides[slide].icon} {slides[slide].label}
+          <p className="text-center text-xs font-medium text-green-deep mt-2 inline-flex items-center justify-center gap-1.5 w-full">
+            {(() => { const I = slides[slide].Icon; return <I size={13} /> })()} {slides[slide].label}
           </p>
         </div>
       </div>
@@ -206,10 +209,10 @@ interface SlideProps {
   refreshing: boolean
 }
 
-function PendingSlide({ emoji, label, polling, onRefresh, refreshing }: { emoji: string; label: string } & SlideProps) {
+function PendingSlide({ Icon, label, polling, onRefresh, refreshing }: { Icon: LucideIcon; label: string } & SlideProps) {
   return (
     <div className="text-center py-12 text-text-secondary">
-      <span className="text-4xl block mb-3">{emoji}</span>
+      <Icon size={36} className="mx-auto mb-3 text-vitalia-muted" />
       {polling ? (
         <p className="animate-pulse">{label} is being generated — checking automatically...</p>
       ) : (
@@ -230,13 +233,13 @@ function PendingSlide({ emoji, label, polling, onRefresh, refreshing }: { emoji:
 
 function HealthReportSlide({ report, polling, onRefresh, refreshing }: { report: string | null } & SlideProps) {
   if (!report) {
-    return <PendingSlide emoji="📋" label="Health report" polling={polling} onRefresh={onRefresh} refreshing={refreshing} />
+    return <PendingSlide Icon={ClipboardList} label="Health report" polling={polling} onRefresh={onRefresh} refreshing={refreshing} />
   }
 
   return (
     <div className="prose prose-sm max-w-none">
       <div className="bg-gradient-to-br from-accent-primary/10 to-accent-sage/10 rounded-card p-4 mb-6 flex items-start gap-3">
-        <span className="text-2xl flex-shrink-0">🩺</span>
+        <Stethoscope size={22} className="flex-shrink-0 text-green-deep" />
         <div>
           <p className="font-semibold text-text-primary text-sm mb-0.5">Your Personal Care Team</p>
           <p className="text-text-secondary text-xs">Functional medicine doctor · Endocrinologist · Clinical nutritionist · Personal trainer</p>
@@ -277,7 +280,7 @@ function HealthReportSlide({ report, polling, onRefresh, refreshing }: { report:
 
 function MealPlanSlide({ plan, polling, onRefresh, refreshing }: { plan: MealPlan | null } & SlideProps) {
   if (!plan) {
-    return <PendingSlide emoji="🥗" label="Meal plan" polling={polling} onRefresh={onRefresh} refreshing={refreshing} />
+    return <PendingSlide Icon={Salad} label="Meal plan" polling={polling} onRefresh={onRefresh} refreshing={refreshing} />
   }
 
   return (
@@ -303,13 +306,13 @@ function MealPlanSlide({ plan, polling, onRefresh, refreshing }: { plan: MealPla
             </div>
             <div className="grid grid-cols-2 gap-2">
               {[
-                { type: 'breakfast', emoji: '🍳', meal: meals.breakfast },
-                { type: 'lunch', emoji: '🥗', meal: meals.lunch },
-                { type: 'dinner', emoji: '🍽️', meal: meals.dinner },
-                { type: 'snack', emoji: '🍎', meal: meals.snack },
-              ].map(({ type, emoji, meal }) => meal ? (
+                { type: 'breakfast', Icon: Coffee, meal: meals.breakfast },
+                { type: 'lunch', Icon: Salad, meal: meals.lunch },
+                { type: 'dinner', Icon: Utensils, meal: meals.dinner },
+                { type: 'snack', Icon: Apple, meal: meals.snack },
+              ].map(({ type, Icon, meal }) => meal ? (
                 <div key={type} className="bg-bg rounded-xl p-2.5">
-                  <p className="text-xs text-text-secondary capitalize mb-0.5">{emoji} {type}</p>
+                  <p className="text-xs text-text-secondary capitalize mb-0.5 inline-flex items-center gap-1"><Icon size={12} /> {type}</p>
                   <p className="text-xs font-medium text-text-primary leading-tight line-clamp-2">{meal.name}</p>
                   <p className="text-xs text-text-secondary mt-0.5">{meal.calories} cal · {meal.protein_g}g protein</p>
                 </div>
@@ -324,7 +327,7 @@ function MealPlanSlide({ plan, polling, onRefresh, refreshing }: { plan: MealPla
 
 function WorkoutPlanSlide({ plan, polling, onRefresh, refreshing }: { plan: WorkoutPlan | null } & SlideProps) {
   if (!plan) {
-    return <PendingSlide emoji="💪" label="Workout plan" polling={polling} onRefresh={onRefresh} refreshing={refreshing} />
+    return <PendingSlide Icon={Dumbbell} label="Workout plan" polling={polling} onRefresh={onRefresh} refreshing={refreshing} />
   }
 
   const workoutDays = DAYS.filter(d => plan.days?.[d]?.type === 'workout').length
@@ -352,10 +355,10 @@ function WorkoutPlanSlide({ plan, polling, onRefresh, refreshing }: { plan: Work
                 isRest ? 'bg-bg' : 'bg-white shadow-card'
               }`}
             >
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg flex-shrink-0 ${
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
                 isRest ? 'bg-bg' : 'bg-accent-primary/15'
               }`}>
-                {isRest ? '🧘' : '🏋️'}
+                {isRest ? <Leaf size={18} className="text-green" /> : <Dumbbell size={18} className="text-green-deep" />}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
@@ -389,7 +392,7 @@ function RoutineSlide({ morningItems, nightItems, polling, onRefresh, refreshing
   const hasData = morningItems.length > 0 || nightItems.length > 0
 
   if (!hasData) {
-    return <PendingSlide emoji="🌅" label="Daily routine" polling={polling} onRefresh={onRefresh} refreshing={refreshing} />
+    return <PendingSlide Icon={Sun} label="Daily routine" polling={polling} onRefresh={onRefresh} refreshing={refreshing} />
   }
 
   return (
@@ -402,7 +405,7 @@ function RoutineSlide({ morningItems, nightItems, polling, onRefresh, refreshing
       {morningItems.length > 0 && (
         <div>
           <div className="flex items-center gap-2 mb-3">
-            <span className="text-xl">🌅</span>
+            <Sun size={20} className="text-amber" />
             <h3 className="font-semibold text-text-primary">Morning Routine</h3>
             <span className="text-xs text-text-secondary">({morningItems.length} items)</span>
           </div>
@@ -425,7 +428,7 @@ function RoutineSlide({ morningItems, nightItems, polling, onRefresh, refreshing
       {nightItems.length > 0 && (
         <div>
           <div className="flex items-center gap-2 mb-3">
-            <span className="text-xl">🌙</span>
+            <Moon size={20} className="text-lavender" />
             <h3 className="font-semibold text-text-primary">Night Routine</h3>
             <span className="text-xs text-text-secondary">({nightItems.length} items)</span>
           </div>
@@ -447,7 +450,7 @@ function RoutineSlide({ morningItems, nightItems, polling, onRefresh, refreshing
 
       {/* Motivational closing card */}
       <div className="bg-gradient-to-br from-accent-primary/15 to-accent-sage/20 rounded-card p-5 text-center">
-        <span className="text-3xl block mb-2">✨</span>
+        <Sparkles size={28} className="mx-auto mb-2 text-green" />
         <p className="font-semibold text-text-primary mb-1">You're all set!</p>
         <p className="text-sm text-text-secondary leading-relaxed">
           Your personalized health journey starts now. Complete your routines daily to keep your pet thriving and watch your health transform week by week.

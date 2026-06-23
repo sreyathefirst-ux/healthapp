@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Meal } from '@/types'
-import { X, ChevronRight } from 'lucide-react'
+import { X, ChevronRight, Flame, HelpCircle } from 'lucide-react'
 
 interface SwapModalProps {
   meal: Meal
@@ -148,7 +148,7 @@ export function SwapModal({ meal, mealType, day, onClose, onConfirm }: SwapModal
                         <h3 className="font-semibold text-text-primary">{alt.name}</h3>
                         <p className="text-text-secondary text-sm mt-1 mb-2 line-clamp-2">{alt.description}</p>
                         <div className="flex gap-2 flex-wrap">
-                          <Badge color="coral">🔥 {alt.calories} cal</Badge>
+                          <Badge color="coral"><span className="inline-flex items-center gap-1"><Flame size={11} /> {alt.calories} cal</span></Badge>
                           <Badge color="primary">P: {alt.protein_g}g</Badge>
                           <Badge color="sage">C: {alt.carbs_g}g</Badge>
                           <Badge color="yellow">F: {alt.fat_g}g</Badge>
@@ -197,7 +197,7 @@ export function SwapModal({ meal, mealType, day, onClose, onConfirm }: SwapModal
 
             {phase === 'skip' && (
               <motion.div key="skip" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4 text-center py-4">
-                <span className="text-5xl block">🤷</span>
+                <HelpCircle size={42} className="mx-auto text-vitalia-muted" />
                 <div>
                   <h3 className="font-semibold text-text-primary mb-1">Nothing's clicking?</h3>
                   <p className="text-sm text-text-secondary">That's okay — you can keep the original or just skip this meal.</p>

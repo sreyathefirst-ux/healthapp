@@ -7,13 +7,14 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { ChevronRight, LogOut } from 'lucide-react'
+import { ChevronRight, LogOut, User, ListChecks, Bell, ShoppingCart, Sprout } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 
-const settingsLinks = [
-  { href: '/settings/profile', emoji: '👤', label: 'Profile & Health Info', desc: 'Edit personal details, conditions, preferences' },
-  { href: '/settings/routine', emoji: '✅', label: 'Routine Editor', desc: 'Customize morning & night routine items' },
-  { href: '/settings/notifications', emoji: '🔔', label: 'Notifications', desc: 'Manage push notification preferences' },
-  { href: '/grocery-list', emoji: '🛒', label: 'Grocery List', desc: 'View this week\'s shopping list' },
+const settingsLinks: { href: string; Icon: LucideIcon; label: string; desc: string }[] = [
+  { href: '/settings/profile', Icon: User, label: 'Profile & Health Info', desc: 'Edit personal details, conditions, preferences' },
+  { href: '/settings/routine', Icon: ListChecks, label: 'Routine Editor', desc: 'Customize morning & night routine items' },
+  { href: '/settings/notifications', Icon: Bell, label: 'Notifications', desc: 'Manage push notification preferences' },
+  { href: '/grocery-list', Icon: ShoppingCart, label: 'Grocery List', desc: 'View this week\'s shopping list' },
 ]
 
 export default function SettingsPage() {
@@ -54,23 +55,25 @@ export default function SettingsPage() {
         {/* Profile summary */}
         <Card className="bg-gradient-to-br from-accent-primary/10 to-accent-sage/10">
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-full bg-accent-primary/30 flex items-center justify-center text-2xl">
-              👤
+            <div className="w-16 h-16 rounded-full bg-accent-primary/30 flex items-center justify-center">
+              <User size={28} className="text-green-deep" />
             </div>
             <div>
               <h2 className="font-bold text-text-primary text-lg">{userName || 'Your Profile'}</h2>
               {weight && <p className="text-text-secondary text-sm">{weight} kg</p>}
-              {petName && <p className="text-text-secondary text-sm">Pet: {petName} 🐾</p>}
+              {petName && <p className="text-text-secondary text-sm inline-flex items-center gap-1.5">Companion: {petName} <Sprout size={13} className="text-green" /></p>}
             </div>
           </div>
         </Card>
 
         {/* Settings links */}
         <div className="space-y-3">
-          {settingsLinks.map(({ href, emoji, label, desc }) => (
+          {settingsLinks.map(({ href, Icon, label, desc }) => (
             <Link key={href} href={href}>
               <Card className="flex items-center gap-4 hover:shadow-lg transition-shadow cursor-pointer">
-                <span className="text-2xl">{emoji}</span>
+                <span className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'var(--gradient-brand)' }}>
+                  <Icon size={20} className="text-white" />
+                </span>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-text-primary">{label}</h3>
                   <p className="text-text-secondary text-sm">{desc}</p>

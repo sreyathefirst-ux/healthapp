@@ -38,20 +38,21 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white flex flex-col items-center justify-center px-8 relative">
-      {/* Top gradient line */}
-      <div
-        className="absolute top-0 left-1/2 -translate-x-1/2 w-16 h-px"
-        style={{ background: 'linear-gradient(90deg, transparent 0%, #5DDAB8 50%, transparent 100%)' }}
-      />
-
-      <div className="w-full max-w-[340px]">
+    <div
+      className="min-h-screen flex flex-col items-center justify-center px-8 relative"
+      style={{ background: 'linear-gradient(180deg, #DEFAEE 0%, #E2F0FC 38%, #EBE5FD 72%, #F1F5F9 100%)' }}
+    >
+      <div className="w-full max-w-[360px] bg-white rounded-[26px] border border-vitalia-border shadow-card-lg p-9">
         {/* Header */}
-        <div className="text-center mb-14">
-          <h1 className="font-bold text-3xl text-text-primary mb-3">Welcome back</h1>
-          <p className="text-[11px] uppercase tracking-[0.8px] text-vitalia-muted">
-            Continue your journey
-          </p>
+        <div className="text-center mb-8">
+          <div
+            className="w-14 h-14 rounded-[18px] mx-auto mb-5"
+            style={{ background: 'linear-gradient(135deg, #0FCB8C 0%, #2BAEE6 50%, #9B53E6 100%)' }}
+          />
+          <h1 className="font-display font-semibold text-[27px] tracking-[-0.01em] text-text-primary mb-1">
+            Welcome back
+          </h1>
+          <p className="text-sm text-text-secondary">Continue where you left off.</p>
         </div>
 
         {/* Form */}
@@ -93,19 +94,16 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full mt-5 py-3 text-white text-[13px] font-bold uppercase tracking-[0.6px] btn-vitalia disabled:opacity-60 disabled:cursor-not-allowed"
+            className="w-full mt-5 py-3.5 text-white text-[15px] font-bold tracking-[0.2px] btn-vitalia disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {loading ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
 
-        <p className="text-center text-[11px] mt-6 text-vitalia-muted">
+        <p className="text-center text-[13.5px] mt-6 text-vitalia-muted">
           Don&apos;t have an account?{' '}
-          <Link
-            href="/signup"
-            className="font-bold hover:underline text-teal"
-          >
-            Sign up
+          <Link href="/signup" className="font-bold hover:underline text-green-deep">
+            Create one
           </Link>
         </p>
       </div>

@@ -5,7 +5,7 @@ import { AppShell } from '@/components/layout/AppShell'
 import { Button } from '@/components/ui/Button'
 import { createClient } from '@/lib/supabase/client'
 import { MealPlan, Meal } from '@/types'
-import { Printer, RefreshCw, ShoppingCart } from 'lucide-react'
+import { Printer, RefreshCw, ShoppingCart, ShoppingBasket, PartyPopper } from 'lucide-react'
 
 interface GrocerySection {
   title: string
@@ -203,7 +203,7 @@ export default function GroceryListPage() {
     return (
       <AppShell>
         <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
-          <span className="text-7xl mb-6">🛒</span>
+          <ShoppingCart size={56} className="mb-6 text-green" />
           <h2 className="text-2xl font-bold text-text-primary mb-3">No grocery list yet</h2>
           <p className="text-text-secondary mb-8 max-w-sm">
             Generate your meal plan first — Vitalia will build a real shopping list organized by store section.
@@ -297,7 +297,7 @@ export default function GroceryListPage() {
             <div key={section.title} className="bg-white rounded-card shadow-card overflow-hidden print:shadow-none print:border print:border-gray-200">
               {/* Section header */}
               <div className="px-5 py-3 border-b border-vitalia-border bg-bg/60 flex items-center gap-2">
-                <span className="text-lg">{section.emoji}</span>
+                <ShoppingBasket size={17} className="text-green" />
                 <h2 className="font-bold text-text-primary text-sm tracking-wide uppercase">{section.title}</h2>
                 <span className="ml-auto text-xs text-text-secondary font-medium">
                   {checkedItems.length > 0 ? `${checkedItems.length}/${section.items.length}` : section.items.length}
@@ -347,7 +347,7 @@ export default function GroceryListPage() {
         {/* All done state */}
         {sections.length > 0 && uncheckedSections.length === 0 && checkedCount > 0 && (
           <div className="text-center py-8 print:hidden">
-            <span className="text-5xl block mb-3">🎉</span>
+            <PartyPopper size={40} className="mx-auto mb-3 text-green" />
             <h3 className="font-semibold text-text-primary mb-1">All done!</h3>
             <p className="text-text-secondary text-sm">You've got everything on your list.</p>
           </div>

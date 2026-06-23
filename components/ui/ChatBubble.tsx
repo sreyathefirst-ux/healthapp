@@ -1,4 +1,5 @@
 import { ReactNode } from 'react'
+import { Sparkles } from 'lucide-react'
 
 interface ChatBubbleProps {
   role: 'user' | 'assistant'
@@ -12,10 +13,10 @@ export function ChatBubble({ role, children }: ChatBubbleProps) {
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-3`}>
       {!isUser && (
         <div
-          className="w-8 h-8 rounded-full flex items-center justify-center text-sm mr-2 flex-shrink-0 mt-1 text-white"
-          style={{ background: 'linear-gradient(135deg, #6FD8A0 0%, #5DDAB8 50%, #B48FE8 100%)' }}
+          className="w-8 h-8 rounded-full flex items-center justify-center mr-2 flex-shrink-0 mt-1 text-white"
+          style={{ background: 'linear-gradient(135deg, #0FCB8C 0%, #2BAEE6 50%, #9B53E6 100%)' }}
         >
-          ✨
+          <Sparkles size={15} />
         </div>
       )}
       <div
@@ -26,7 +27,7 @@ export function ChatBubble({ role, children }: ChatBubbleProps) {
         }`}
         style={isUser
           ? {
-              background: 'linear-gradient(135deg, #8B7FD8 0%, #B48FE8 100%)',
+              background: 'linear-gradient(135deg, #2BAEE6 0%, #9B53E6 100%)',
               borderRadius: '20px 4px 20px 20px',
             }
           : { borderRadius: '4px 20px 20px 20px' }

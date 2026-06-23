@@ -219,8 +219,8 @@ export default function RoutineSettingsPage() {
         </div>
         <p className="text-text-secondary text-sm">Changes save automatically. Reorder using the arrow buttons.</p>
 
-        <RoutineEditor title="☀️ Morning Routine" items={morningItems} onChange={setMorningItems} />
-        <RoutineEditor title="🌙 Night Routine" items={nightItems} onChange={setNightItems} />
+        <RoutineEditor title="Morning Routine" items={morningItems} onChange={setMorningItems} />
+        <RoutineEditor title="Night Routine" items={nightItems} onChange={setNightItems} />
       </div>
     </AppShell>
   )
